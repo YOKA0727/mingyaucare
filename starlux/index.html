@@ -73,6 +73,11 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .b-ok{background:var(--ok-bg);color:var(--ok)} .b-warn{background:var(--warn-bg);color:var(--warn)}
 .b-bad{background:var(--bad-bg);color:var(--bad)} .b-info{background:var(--info-bg);color:var(--info)}
 .b-none{color:var(--muted);border:1px solid var(--line)}
+.term{font-size:12px;margin-top:4px;color:var(--ink);display:flex;flex-wrap:wrap;column-gap:12px}
+.term .ti{white-space:nowrap}
+.term b{color:var(--gold)}
+.term .tsrc{font-size:10px;color:var(--muted);margin-left:3px}
+.term .tna{color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:14px;line-height:1.7}
 .setup{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:16px;line-height:1.7;font-size:14px}
 .setup h2{margin:0 0 6px;font-size:17px}
@@ -387,9 +392,25 @@ function liveDetail(s, kind){
   const bits = [];
   const est = kind === 'dep' ? (s.dep_actual || s.dep_estimated) : (s.arr_actual || s.arr_estimated);
   if (est) bits.push((kind==='dep' ? (s.dep_actual?'實際起飛 ':'預估起飛 ') : (s.arr_actual?'實際抵達 ':'預估抵達 ')) + String(est).slice(11,16));
-  if (kind === 'dep' && (s.dep_terminal || s.dep_gate)) bits.push([s.dep_terminal && ('航廈 '+s.dep_terminal), s.dep_gate && ('登機門 '+s.dep_gate)].filter(Boolean).join(' '));
-  if (kind === 'arr' && (s.arr_terminal || s.arr_baggage)) bits.push([s.arr_terminal && ('航廈 '+s.arr_terminal), s.arr_baggage && ('行李轉盤 '+s.arr_baggage)].filter(Boolean).join(' '));
+  if (kind === 'dep' && s.dep_gate) bits.push('登機門 '+s.dep_gate);
+  if (kind === 'arr' && s.arr_baggage) bits.push('行李轉盤 '+s.arr_baggage);
   return bits.length ? '<div class="sub">即時：'+esc(bits.join('・'))+'</div>' : '';
+}
+// 數字航廈顯示 T1、T2；字母或其他名稱（如 B、INTL）照原樣顯示
+const termLabel = t => /^\d+$/.test(String(t).replace(/^T/i,'')) ? 'T'+String(t).replace(/^T/i,'') : String(t);
+// 航廈：即時資料優先 → 班表欄位 → 未提供（不自行猜測）
+function terminalOf(r, s, which){
+  const liveT = s && s[which+'_terminal'];
+  if (liveT) return {t:String(liveT), src:'即時'};
+  const arr = r[which+'_terminals'];
+  const fixed = Array.isArray(arr) ? arr.filter(Boolean).join('/') : (arr || r[which+'_terminal']);
+  if (fixed) return {t:String(fixed), src:'表定'};
+  return null;
+}
+function terminalHtml(r, s){
+  const d = terminalOf(r, s, 'dep'), a = terminalOf(r, s, 'arr');
+  const show = (x, lbl) => `<span class="ti">${x ? `${lbl} <b>${esc(termLabel(x.t))}</b><span class="tsrc">${x.src}</span>` : `${lbl} <span class="tna">未提供</span>`}</span>`;
+  return `<div class="term">${show(d,'起飛航廈')}${show(a,'落地航廈')}</div>`;
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -420,6 +441,7 @@ function legHtml(kind, r, depMs, arrMs, base){
     <div>
       <div class="times">${esc(from)} ${fmt(dp)}${dlab?`<span class="d">${dlab}</span>`:''}<span class="arrow">→</span>${esc(to)} ${ap?fmt(ap):'--:--'}${alab?`<span class="d">${alab}</span>`:''}</div>
       <div class="sub">${esc(nameOf(from))} → ${esc(nameOf(to))}${r.aircraft_icao?'・'+esc(r.aircraft_icao):''}${daysNote}</div>
+      ${terminalHtml(r, s)}
       ${liveDetail(s, kind==='out'?'dep':'arr')}
     </div>
     <div>${badge(s)}</div>
@@ -461,11 +483,12 @@ function render(){
   let notice = '<div class="notice"><h2>通知</h2>';
   const nrow = (lbl, big, ms) => `<div class="nrow"><div><div class="lbl">${lbl}</div><div class="big">${big}</div></div><div class="cd">${ms?countdown(ms):''}</div></div>`;
   if (nextDep){ const p = partsIn(TPE_TZ, nextDep.depMs); notice += nrow('下一班從台北出發', `${esc(fno(nextDep.r))} ${fmt(p)} → ${esc(nameOf(nextDep.dest))}`, nextDep.depMs); }
-  if (nextArr){ const p = partsIn(TPE_TZ, nextArr.ret.arrMs); notice += nrow('下一班回到台北（台北時間）', `${esc(fno(nextArr.ret.r))} ${fmt(p)} ${dayDiffLabel(p, nextArr.base)} ← ${esc(nameOf(nextArr.dest))}`, nextArr.ret.arrMs); }
+  const arrTermTxt = x => { const t = terminalOf(x.ret.r, liveFor(x.ret.r, x.ret.depMs), 'arr'); return t ? `・落地航廈 ${esc(termLabel(t.t))}` : '・落地航廈未提供'; };
+  if (nextArr){ const p = partsIn(TPE_TZ, nextArr.ret.arrMs); notice += nrow('下一班回到台北（台北時間）', `${esc(fno(nextArr.ret.r))} ${fmt(p)} ${dayDiffLabel(p, nextArr.base)} ← ${esc(nameOf(nextArr.dest))}<div class="lbl">${arrTermTxt(nextArr)}</div>`, nextArr.ret.arrMs); }
   for (const x of pinnedRows){
     const p = partsIn(TPE_TZ, x.depMs);
     const rp = x.ret && x.ret.arrMs ? partsIn(TPE_TZ, x.ret.arrMs) : null;
-    notice += nrow(`★ ${esc(nameOf(x.dest))}`, `${esc(fno(x.r))} ${fmt(p)} 出發・${x.ret?esc(fno(x.ret.r))+' '+(rp?fmt(rp)+' '+dayDiffLabel(rp, x.base):'')+' 回台':'無回程資料'}`, null);
+    notice += nrow(`★ ${esc(nameOf(x.dest))}`, `${esc(fno(x.r))} ${fmt(p)} 出發・${x.ret?esc(fno(x.ret.r))+' '+(rp?fmt(rp)+' '+dayDiffLabel(rp, x.base):'')+' 回台'+arrTermTxt(x):'無回程資料'}`, null);
   }
   if (!nextDep && !nextArr && !pinnedRows.length) notice += '<div class="note">這一天沒有尚未出發的航班。</div>';
   notice += '</div>';
