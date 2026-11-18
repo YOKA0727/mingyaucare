@@ -157,29 +157,27 @@ const LIVE_TTL = 10 * 60e3;
 
 // 航點中文名稱與時區（僅作顯示與時間換算；未列出的航點會顯示 IATA 代碼並改用 API 的 UTC 時間）
 const AIRPORTS = {
-  TPE:['台北桃園','Asia/Taipei'], RMQ:['台中','Asia/Taipei'], KHH:['高雄','Asia/Taipei'],
-  LAX:['洛杉磯','America/Los_Angeles'], SFO:['舊金山','America/Los_Angeles'], SEA:['西雅圖','America/Los_Angeles'],
-  ONT:['安大略','America/Los_Angeles'], PHX:['鳳凰城','America/Phoenix'],
-  PRG:['布拉格','Europe/Prague'],
-  SIN:['新加坡','Asia/Singapore'], KUL:['吉隆坡','Asia/Kuala_Lumpur'], PEN:['檳城','Asia/Kuala_Lumpur'],
-  BKK:['曼谷','Asia/Bangkok'], CNX:['清邁','Asia/Bangkok'],
-  NRT:['東京成田','Asia/Tokyo'], HND:['東京羽田','Asia/Tokyo'], CTS:['札幌','Asia/Tokyo'],
-  KIX:['大阪','Asia/Tokyo'], NGO:['名古屋','Asia/Tokyo'], FUK:['福岡','Asia/Tokyo'], OKA:['沖繩','Asia/Tokyo'],
-  SDJ:['仙台','Asia/Tokyo'], KMJ:['熊本','Asia/Tokyo'], HKD:['函館','Asia/Tokyo'], KOJ:['鹿兒島','Asia/Tokyo'],
-  HKG:['香港','Asia/Hong_Kong'], MFM:['澳門','Asia/Macau'],
-  MNL:['馬尼拉','Asia/Manila'], CEB:['宿霧','Asia/Manila'], CRK:['克拉克','Asia/Manila'],
-  SGN:['胡志明市','Asia/Ho_Chi_Minh'], HAN:['河內','Asia/Ho_Chi_Minh'], DAD:['峴港','Asia/Ho_Chi_Minh'],
-  CGK:['雅加達','Asia/Jakarta'], DPS:['峇里島','Asia/Makassar'], ICN:['首爾','Asia/Seoul'], PUS:['釜山','Asia/Seoul'],
+  TPE:['台北桃園','Asia/Taipei','台灣'], RMQ:['台中','Asia/Taipei','台灣'], KHH:['高雄','Asia/Taipei','台灣'],
+  LAX:['洛杉磯','America/Los_Angeles','美洲'], SFO:['舊金山','America/Los_Angeles','美洲'], SEA:['西雅圖','America/Los_Angeles','美洲'],
+  ONT:['安大略','America/Los_Angeles','美洲'], PHX:['鳳凰城','America/Phoenix','美洲'], GUM:['關島','Pacific/Guam','美洲'],
+  PRG:['布拉格','Europe/Prague','歐洲'],
+  NRT:['東京成田','Asia/Tokyo','日本'], HND:['東京羽田','Asia/Tokyo','日本'], CTS:['札幌','Asia/Tokyo','日本'],
+  KIX:['大阪','Asia/Tokyo','日本'], UKB:['神戶','Asia/Tokyo','日本'], NGO:['名古屋','Asia/Tokyo','日本'],
+  FUK:['福岡','Asia/Tokyo','日本'], OKA:['沖繩','Asia/Tokyo','日本'], MMY:['宮古島','Asia/Tokyo','日本'],
+  SDJ:['仙台','Asia/Tokyo','日本'], KMJ:['熊本','Asia/Tokyo','日本'], HKD:['函館','Asia/Tokyo','日本'],
+  KOJ:['鹿兒島','Asia/Tokyo','日本'], TAK:['高松','Asia/Tokyo','日本'], TKS:['德島','Asia/Tokyo','日本'],
+  ICN:['首爾','Asia/Seoul','韓國'], PUS:['釜山','Asia/Seoul','韓國'],
+  HKG:['香港','Asia/Hong_Kong','港澳'], MFM:['澳門','Asia/Macau','港澳'],
+  SGN:['胡志明市','Asia/Ho_Chi_Minh','越南'], HAN:['河內','Asia/Ho_Chi_Minh','越南'],
+  DAD:['峴港','Asia/Ho_Chi_Minh','越南'], PQC:['富國島','Asia/Ho_Chi_Minh','越南'], CXR:['芽莊','Asia/Ho_Chi_Minh','越南'],
+  MNL:['馬尼拉','Asia/Manila','菲律賓'], CEB:['宿霧','Asia/Manila','菲律賓'], CRK:['克拉克','Asia/Manila','菲律賓'],
+  BKK:['曼谷','Asia/Bangkok','泰國'], CNX:['清邁','Asia/Bangkok','泰國'], HKT:['普吉島','Asia/Bangkok','泰國'],
+  SIN:['新加坡','Asia/Singapore','新馬'], KUL:['吉隆坡','Asia/Kuala_Lumpur','新馬'], PEN:['檳城','Asia/Kuala_Lumpur','新馬'],
+  CGK:['雅加達','Asia/Jakarta','其他'], DPS:['峇里島','Asia/Makassar','其他'],
 };
-const REGION = code => {
-  if (['LAX','SFO','SEA','ONT','PHX'].includes(code)) return '美洲';
-  if (['PRG'].includes(code)) return '歐洲';
-  if (['NRT','HND','CTS','KIX','NGO','FUK','OKA','SDJ','KMJ','HKD','KOJ'].includes(code)) return '日本';
-  if (['ICN','PUS'].includes(code)) return '韓國';
-  if (['HKG','MFM'].includes(code)) return '港澳';
-  return '東南亞及其他';
-};
-const REGION_ORDER = ['美洲','歐洲','日本','韓國','港澳','東南亞及其他'];
+// 分區只影響畫面分組；不在上表的航點仍會顯示（名稱用代碼，分在「其他」）
+const REGION = code => AIRPORTS[code] ? AIRPORTS[code][2] : '其他';
+const REGION_ORDER = ['美洲','歐洲','日本','韓國','港澳','越南','菲律賓','泰國','新馬','台灣','其他'];
 // 使用者指定：美洲、歐洲、新加坡、吉隆坡、曼谷、東京、札幌 → 顯示隔天回程
 const DEFAULT_LONG = ['LAX','SFO','SEA','ONT','PHX','PRG','SIN','KUL','BKK','NRT','HND','CTS'];
 const WEEK = ['sun','mon','tue','wed','thu','fri','sat'];
@@ -506,7 +504,7 @@ function render(){
       for (const x of groups[g]){
         html += `<div class="card ${pinned.has(x.dest)?'pinned':''}">
           <div class="chead">
-            <div class="dest">${esc(nameOf(x.dest))}<span class="code">${esc(x.dest)}</span></div>
+            <div class="dest">${esc(nameOf(x.dest))}${nameOf(x.dest)!==x.dest?`<span class="code">${esc(x.dest)}</span>`:''}</div>
             <div style="display:flex;gap:6px;align-items:center">
               ${x.isLong ? '<span class="tag">過夜・隔天回程</span>' : '<span class="tag">當天來回</span>'}
               <button class="pin ${pinned.has(x.dest)?'on':''}" data-pin="${esc(x.dest)}" aria-label="釘選">${pinned.has(x.dest)?'★':'☆'}</button>
