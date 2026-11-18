@@ -98,6 +98,24 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .vrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .vl-n{min-width:62px;font-weight:700;color:var(--ink)}
 .vlinks a{color:var(--accent);text-decoration:none;border:1px solid rgba(245,169,198,.4);border-radius:999px;padding:4px 10px;background:rgba(245,169,198,.08)}
+.herbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.herbar.on{background:rgba(245,169,198,.1);border:1px solid rgba(245,169,198,.35);border-radius:14px;padding:8px 10px}
+.herlbl{font-weight:700;color:var(--accent);font-size:14px;margin-right:4px}
+.hbtn{border:1px solid rgba(245,169,198,.45);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.hbtn.main{background:linear-gradient(135deg,#f5a9c6,#ffc9a8);color:#2a1424;border:0;font-weight:700}
+.hbtn.on{background:var(--accent);color:#2a1424;border-color:var(--accent);font-weight:700}
+.hbtn.ghost{border-color:var(--line);color:var(--muted)}
+.seg{display:inline-flex;gap:4px}
+.card.hercard{border-color:#f5a9c6;box-shadow:0 0 0 1px #f5a9c6 inset,0 6px 20px rgba(245,169,198,.15)}
+.notice.her{border-color:#f5a9c6;background:linear-gradient(160deg,#3a2133,#241a2c 70%)}
+.notice.her h2::before{content:'💗 '}
+.herrow{padding:10px 0;border-top:1px dashed var(--line);cursor:pointer}
+.herrow:first-of-type{border-top:0;padding-top:2px}
+.herrow .lbl{font-size:12px;color:var(--accent)}
+.herrow .big{font-size:17px;font-weight:700;margin-top:2px}
+.herst{margin-top:6px;font-size:13px;color:#ffd6a5}
+.herst b{font-size:15px}
+.gcal{color:var(--accent);text-decoration:none;border:1px solid rgba(245,169,198,.4);border-radius:999px;padding:6px 12px;font-size:13px}
 .gtools{display:flex;gap:16px;justify-content:center;margin:6px 0}
 .linkbtn{background:none;border:0;color:var(--gold);font-size:14px;cursor:pointer;padding:6px}
 .group-title{font-size:13px;color:var(--muted);margin:18px 2px 8px;letter-spacing:1px}
@@ -203,6 +221,9 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <label class="f" for="turnMin">當天來回：抵達後最短折返時間（分鐘，預設 40）</label>
     <input type="number" id="turnMin" min="10" max="600" step="5">
 
+    <label class="f" for="remindMin">加入行事曆時：Sophie 落地前幾分鐘提醒（預設 60）</label>
+    <input type="number" id="remindMin" min="0" max="600" step="5">
+
     <label class="f"><input type="checkbox" id="autoRefresh"> App 開著時每 15 分鐘自動更新即時狀態（會消耗 API 次數）</label>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -216,6 +237,14 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       「回程」是依航空公司公開班表自動配對的，<b>不一定是女友實際的組員排班</b>。
     </p>
   </form>
+</dialog>
+
+<dialog id="calDlg">
+  <div class="dlg">
+    <h2>加入行事曆</h2>
+    <div id="calBody"></div>
+    <button class="btn ghost" type="button" onclick="this.closest('dialog').close()">關閉</button>
+  </div>
 </dialog>
 
 <dialog id="rawDlg">
@@ -274,10 +303,14 @@ const store = {
   del(k){ try{ localStorage.removeItem('jx.'+k); }catch(e){} },
 };
 const settings = Object.assign({
-  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[]
+  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[], her:{}, remindMin:60
 }, store.get('settings', {}));
 delete settings.longHaul; // 舊版固定清單已改為自動判斷
 if (!settings.overrides || typeof settings.overrides !== 'object') settings.overrides = {};
+if (!settings.her || typeof settings.her !== 'object') settings.her = {};
+// 清掉 10 天前的「她的航班」標記
+{ const tp0 = partsIn('Asia/Taipei', Date.now()), today0 = Date.UTC(tp0.y, tp0.m-1, tp0.d);
+  for (const k of Object.keys(settings.her)){ const [y,m,d] = k.split('-').map(Number); if (Date.UTC(y,m-1,d) < today0 - 10*86400e3) delete settings.her[k]; } }
 const saveSettings = () => store.set('settings', settings);
 
 let dayOffset = 0;          // 0=今天 1=明天 ...
@@ -446,11 +479,11 @@ function findReturn(dest, outR, arrMs, minGapMs, maxGapMs){
   const d = routeDurMin(best.r, best.depMs);
   return {r:best.r, depMs:best.depMs, arrMs: d != null ? best.depMs + d*60000 : null};
 }
-function buildBoard(){
+function buildBoard(off){
   if (!routes) return [];
   const now = Date.now();
   const tp = partsIn(TPE_TZ, now);
-  const baseMs = Date.UTC(tp.y, tp.m-1, tp.d) + dayOffset*86400e3;
+  const baseMs = Date.UTC(tp.y, tp.m-1, tp.d) + (off ?? dayOffset)*86400e3;
   const bd = new Date(baseMs);
   const base = {y:bd.getUTCFullYear(), m:bd.getUTCMonth()+1, d:bd.getUTCDate(), wd:bd.getUTCDay()};
 
@@ -480,7 +513,7 @@ function buildBoard(){
     if (ov === 'long' || ov === 'short'){ cls = ov; manual = true; reason = '手動設定'; }
     const ret = cls === 'long' ? night : (turn || night);
     const alt = cls === 'long' ? null : (night && (!turn || night.r !== turn.r || night.depMs !== turn.depMs) ? night : null);
-    rows.push({r, dest, cls, reason, manual, depMs, arrMs, ret, alt, base});
+    rows.push({r, dest, cls, reason, manual, depMs, arrMs, ret, alt, turn, night, base});
   }
   rows.sort((a,b) => a.depMs - b.depMs);
   return rows;
@@ -573,6 +606,106 @@ function verifyLinks(x){
   return `<div class="vlinks"><div class="vrow"><span class="vl-l">查證：</span><a href="${gf}" target="_blank" rel="noopener">Google 航班（${esc(x.dest)}）</a></div>` +
     nums.map(n => `<div class="vrow"><span class="vl-n">${esc(n)}</span><a href="${fa(n)}" target="_blank" rel="noopener">FlightAware</a><a href="${st(n)}" target="_blank" rel="noopener">Google 狀態</a></div>`).join('') + '</div>';
 }
+/* ---------- Sophie 的航班 ---------- */
+const HER = 'Sophie';
+const dateKeyOf = b => b.y+'-'+pad(b.m)+'-'+pad(b.d);
+function offsetOfKey(k){ const [y,m,d] = k.split('-').map(Number); const tp = partsIn(TPE_TZ, Date.now()); return Math.round((Date.UTC(y,m-1,d) - Date.UTC(tp.y,tp.m-1,tp.d))/86400e3); }
+function herTrip(k){
+  const h = settings.her[k]; if (!h || !routes) return null;
+  const x = buildBoard(offsetOfKey(k)).find(x => fno(x.r) === h.f && x.dest === h.dest);
+  if (!x) return {k, h, missing:true};
+  const ret = h.mode === 'night' ? (x.night || x.ret) : h.mode === 'turn' ? (x.turn || x.ret) : x.ret;
+  return {k, h, x, ret};
+}
+function herControls(x){
+  const k = dateKeyOf(x.base), h = settings.her[k];
+  const mine = h && h.f === fno(x.r) && h.dest === x.dest;
+  if (!mine) return `<div class="herbar"><button type="button" class="hbtn main" data-hset="${esc(k+'|'+fno(x.r)+'|'+x.dest+'|'+(x.cls==='long'?'night':'turn'))}">💗 ${HER} 飛這班</button>${h ? `<span class="note">（這天已標記 ${esc(h.f)}，按下會改成這班）</span>` : ''}</div>`;
+  const both = x.turn && x.night && !(x.turn.r === x.night.r && x.turn.depMs === x.night.depMs);
+  const modes = both ? `<span class="seg"><button type="button" class="hbtn ${h.mode!=='night'?'on':''}" data-hmode="${k}|turn">當天回</button><button type="button" class="hbtn ${h.mode==='night'?'on':''}" data-hmode="${k}|night">過夜</button></span>` : '';
+  return `<div class="herbar on"><span class="herlbl">💗 ${HER} 飛這班</span>${modes}<button type="button" class="hbtn" data-hcal="${k}">📅 加入行事曆</button><button type="button" class="hbtn ghost" data-hclear="${k}">取消</button></div>`;
+}
+function herStatus(t){
+  const now = Date.now(), x = t.x, r = t.ret, place = nameOf(x.dest);
+  if (now < x.depMs) return ['起飛倒數', x.depMs];
+  if (x.arrMs && now < x.arrMs) return [`飛往${place}中，抵達`, x.arrMs];
+  if (r && now < r.depMs) return [`在${place}，回程起飛`, r.depMs];
+  if (r && r.arrMs && now < r.arrMs) return ['回程飛行中，落地', r.arrMs];
+  return ['已回到台北 💗', null];
+}
+function herNotice(){
+  const keys = Object.keys(settings.her).sort();
+  const now = Date.now();
+  let out = '';
+  for (const k of keys){
+    const off = offsetOfKey(k); if (off < -6 || off > 14) continue;
+    const t = herTrip(k); if (!t) continue;
+    const [y,m,d] = k.split('-').map(Number), wd = new Date(Date.UTC(y,m-1,d)).getUTCDay();
+    const dl = `${m}/${d}（${WEEK_ZH[wd]}）`;
+    if (t.missing){ out += `<div class="herrow"><div class="lbl">💗 ${dl}</div><div class="big">${esc(t.h.f)} → ${esc(nameOf(t.h.dest))}</div><div class="note">班表裡找不到這班（可能停飛或班表已變更）</div></div>`; continue; }
+    if (t.ret && t.ret.arrMs && t.ret.arrMs < now - 3*3600e3) continue;   // 已回來超過 3 小時就不顯示
+    if (!t.ret && t.x.depMs < now - 24*3600e3) continue;
+    const dp = partsIn(TPE_TZ, t.x.depMs);
+    const rp = t.ret && t.ret.arrMs ? partsIn(TPE_TZ, t.ret.arrMs) : null;
+    const term = t.ret ? terminalOf(t.ret.r, liveFor(t.ret.r, t.ret.depMs), 'arr') : null;
+    const [st, ms] = herStatus(t);
+    out += `<div class="herrow" ${off>=0&&off<=6?`data-d="${off}"`:''}>
+      <div class="lbl">💗 ${HER}・${dl}${t.x.cls==='long'||t.h.mode==='night'?'・過夜':''}</div>
+      <div class="big">${esc(fno(t.x.r))} ${fmt(dp)} 台北 → ${esc(nameOf(t.x.dest))}</div>
+      <div class="sub">${t.ret ? `回程 ${esc(fno(t.ret.r))}，${rp ? fmt(rp)+' '+(dayDiffLabel(rp, t.x.base)||'當天') : '時間不明'} 抵台・落地航廈 ${term ? esc(termLabel(term.t)) : '未提供'}` : '找不到回程班機'}</div>
+      <div class="herst">${st}${ms ? '：<b>'+countdown(ms)+'</b>' : ''}</div>
+    </div>`;
+  }
+  return out ? `<div class="notice her"><h2>${HER} 的航班</h2>${out}</div>` : '';
+}
+
+/* ---------- 行事曆 ---------- */
+const icsTime = ms => new Date(ms).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+const icsEsc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+function icsFold(line){ const out = []; let cur = ''; for (const ch of line){ if (new TextEncoder().encode(cur+ch).length > 73){ out.push(cur); cur = ' '+ch; } else cur += ch; } out.push(cur); return out.join('\r\n'); }
+function herEvents(t){
+  const x = t.x, r = t.ret, place = nameOf(x.dest), ev = [];
+  const term = r ? terminalOf(r.r, liveFor(r.r, r.depMs), 'arr') : null;
+  ev.push({id:'out', title:`✈︎ ${HER} ${fno(x.r)} 台北→${place}`, start:x.depMs, end:x.arrMs || x.depMs+3600e3, loc:'台灣桃園國際機場', desc:`${fno(x.r)} TPE→${x.dest}（表定時間，可能變動）`});
+  if (r){
+    ev.push({id:'ret', title:`✈︎ ${HER} ${fno(r.r)} ${place}→台北`, start:r.depMs, end:r.arrMs || r.depMs+3600e3, loc:place, desc:`${fno(r.r)} ${x.dest}→TPE（表定時間，可能變動）`});
+    if (r.arrMs) ev.push({id:'land', title:`💗 ${HER} 落地桃園${term ? ' '+termLabel(term.t) : ''}`, start:r.arrMs, end:r.arrMs+30*60e3, loc:'台灣桃園國際機場'+(term?' '+termLabel(term.t):''), desc:`${fno(r.r)} 表定落地時間，出發前請再查證航班狀態`, alarm:settings.remindMin});
+  }
+  return ev;
+}
+function buildIcs(t){
+  const L = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//laoda-flights//JX//ZH','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  for (const e of herEvents(t)){
+    L.push('BEGIN:VEVENT', `UID:${t.k}-${fno(t.x.r)}-${e.id}@laoda-flights`, `DTSTAMP:${icsTime(Date.now())}`, `DTSTART:${icsTime(e.start)}`, `DTEND:${icsTime(e.end)}`,
+      `SUMMARY:${icsEsc(e.title)}`, `LOCATION:${icsEsc(e.loc)}`, `DESCRIPTION:${icsEsc(e.desc)}`);
+    if (e.alarm) L.push('BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(e.title)}`,`TRIGGER:-PT${Math.round(e.alarm)}M`,'END:VALARM');
+    L.push('END:VEVENT');
+  }
+  L.push('END:VCALENDAR');
+  return L.map(icsFold).join('\r\n') + '\r\n';
+}
+function gcalUrl(e){
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(e.title) + '&dates=' + icsTime(e.start) + '/' + icsTime(e.end) + '&location=' + encodeURIComponent(e.loc) + '&details=' + encodeURIComponent(e.desc);
+}
+function openCalDialog(k){
+  const t = herTrip(k);
+  if (!t || t.missing){ alert('找不到這班的資料'); return; }
+  const evs = herEvents(t);
+  $('calBody').innerHTML = `<p class="note">會建立 ${evs.length} 個事件：去程、回程${evs.some(e=>e.id==='land')?`，以及「落地」事件（落地前 ${settings.remindMin} 分鐘提醒）`:''}。時間是表定時間，延誤不會自動更新。</p>
+    <button type="button" class="btn" id="icsBtn">📅 加入 iPhone 行事曆</button>
+    <p class="note" style="margin-top:14px">或用 Google 日曆（一次一個事件，提醒用 Google 日曆預設值）：</p>
+    <div class="vrow">${evs.map(e => `<a class="gcal" href="${gcalUrl(e)}" target="_blank" rel="noopener">${e.id==='out'?'去程':e.id==='ret'?'回程':'落地'}</a>`).join('')}</div>`;
+  $('icsBtn').onclick = () => {
+    const text = buildIcs(t), name = `Sophie-${t.k}-${fno(t.x.r)}.ics`;
+    const blob = new Blob([text], {type:'text/calendar;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    // iPhone Safari 打開 .ics 會出現「加入行事曆」畫面；電腦瀏覽器則會下載檔案
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+  };
+  $('calDlg').showModal();
+}
+
 function tagHtml(x){
   const m = x.manual ? '（手動）' : '（推算）';
   if (x.cls === 'long') return `<span class="tag long">過夜${m}</span>`;
@@ -628,12 +761,13 @@ function render(){
   if (!nextDep && !nextArr && !pinnedRows.length) notice += '<div class="note">這一天沒有尚未出發的航班。</div>';
   notice += '</div>';
 
-  let html = notice + `<input class="search" id="search" type="search" placeholder="搜尋航點、班號（例：東京、JX800）" value="${esc(query)}">`;
+  let html = herNotice() + notice + `<input class="search" id="search" type="search" placeholder="搜尋航點、班號（例：東京、JX800）" value="${esc(query)}">`;
   if (lastError) html += `<div class="err">${esc(lastError)}</div>`;
   if (!list.length){
     html += `<div class="empty">${board.length ? '找不到符合的航班' : '這一天 API 沒有回傳從台北出發的星宇航班。<br>若持續如此，請到設定「清除班表快取並重抓」。'}</div>`;
   } else {
-    const cardHtml = x => `<div class="card ${pinned.has(x.dest)?'pinned':''}">
+    const isHer = x => { const h = settings.her[dateKeyOf(x.base)]; return h && h.f === fno(x.r) && h.dest === x.dest; };
+    const cardHtml = x => `<div class="card ${pinned.has(x.dest)?'pinned':''} ${isHer(x)?'hercard':''}">
           <div class="chead">
             <div class="dest">${esc(nameOf(x.dest))}${nameOf(x.dest)!==x.dest?`<span class="code">${esc(x.dest)}</span>`:''}</div>
             <div style="display:flex;gap:6px;align-items:center">
@@ -646,6 +780,7 @@ function render(){
           ${x.alt && x.cls==='unsure' ? legHtml('back', x.alt.r, x.alt.depMs, x.alt.arrMs, x.base, '回程（若過夜）') : ''}
           ${x.alt && x.cls==='short' ? altLine(x) : ''}
           <div class="why">判斷依據：${esc(x.reason)}</div>
+          ${herControls(x)}
           ${verifyLinks(x)}
         </div>`;
     const searching = !!q;
@@ -730,9 +865,17 @@ async function refresh(forceLive, forceRoutes){
 }
 
 document.addEventListener('click', e => {
+  const hb = e.target.closest('[data-hset],[data-hmode],[data-hclear],[data-hcal]');
+  if (hb){
+    if (hb.dataset.hset){ const [k,f,dest,mode] = hb.dataset.hset.split('|'); settings.her[k] = {f, dest, mode}; saveSettings(); render(); }
+    else if (hb.dataset.hmode){ const [k,mode] = hb.dataset.hmode.split('|'); if (settings.her[k]){ settings.her[k].mode = mode; saveSettings(); render(); } }
+    else if (hb.dataset.hclear){ delete settings.her[hb.dataset.hclear]; saveSettings(); render(); }
+    else if (hb.dataset.hcal){ openCalDialog(hb.dataset.hcal); }
+    return;
+  }
   const t = e.target.closest('[data-d],[data-pin]');
   if (!t) return;
-  if (t.dataset.d != null){ dayOffset = +t.dataset.d; render(); }
+  if (t.dataset.d != null){ dayOffset = +t.dataset.d; render(); if (t.classList.contains('herrow')) window.scrollTo({top:0}); }
   if (t.dataset.pin){
     const c = t.dataset.pin, i = settings.pinned.indexOf(c);
     if (i >= 0) settings.pinned.splice(i,1); else settings.pinned.push(c);
@@ -746,6 +889,7 @@ function openSettings(){
   $('layoverH').value = settings.layoverH;
   $('turnMin').value = settings.turnMin;
   $('autoRefresh').checked = !!settings.autoRefresh;
+  $('remindMin').value = settings.remindMin;
   $('turnMaxH').value = settings.turnMaxH;
   $('dutySureH').value = settings.dutySureH;
   $('dutyMaxH').value = settings.dutyMaxH;
@@ -768,6 +912,7 @@ $('settingsForm').addEventListener('submit', e => {
     settings.layoverH = Math.max(1, +$('layoverH').value || 10);
     settings.turnMin = Math.max(10, +$('turnMin').value || 40);
     settings.autoRefresh = $('autoRefresh').checked;
+    settings.remindMin = Math.max(0, +$('remindMin').value || 0);
     settings.turnMaxH = Math.max(1, +$('turnMaxH').value || 3);
     settings.dutySureH = Math.max(4, +$('dutySureH').value || 11);
     settings.dutyMaxH = Math.max(settings.dutySureH, +$('dutyMaxH').value || 13);
