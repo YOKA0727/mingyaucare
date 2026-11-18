@@ -4,8 +4,8 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0e1424",
   "theme_color": "#0e1424",
   "lang": "zh-Hant",
-  "icons": [{ "src": "icon.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+  "icons": [{ "src": "laoda-icon-180.png", "sizes": "180x180", "type": "image/png" }, { "src": "laoda-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
 }
