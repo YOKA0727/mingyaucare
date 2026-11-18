@@ -87,6 +87,12 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .grp.country>summary{padding:12px 36px 12px 14px}
 .grp.country .gname{font-size:15px}
 .grp .card{background:var(--card)}
+.rawtbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+.rawtbl td,.rawtbl th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+.rawtbl th{color:var(--muted);font-weight:500}
+.rawh{font-weight:700;margin-top:14px}
+.offday{font-size:13px;line-height:1.7}
+.offday li{margin:2px 0}
 .gtools{display:flex;gap:16px;justify-content:center;margin:6px 0}
 .linkbtn{background:none;border:0;color:var(--gold);font-size:14px;cursor:pointer;padding:6px}
 .group-title{font-size:13px;color:var(--muted);margin:18px 2px 8px;letter-spacing:1px}
@@ -197,6 +203,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" value="save" id="saveBtn">儲存</button>
       <button class="btn ghost" value="clear" id="clearCacheBtn" type="button">清除班表快取並重抓</button>
+      <button class="btn ghost" id="rawBtn" type="button">查看 API 原始班表</button>
       <button class="btn ghost" value="cancel">取消</button>
     </div>
     <p class="note" style="margin-top:14px">
@@ -204,6 +211,16 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       「回程」是依航空公司公開班表自動配對的，<b>不一定是女友實際的組員排班</b>。
     </p>
   </form>
+</dialog>
+
+<dialog id="rawDlg">
+  <div class="dlg">
+    <h2>API 原始班表</h2>
+    <div class="note">這裡列出 AirLabs 實際回傳的星宇台北航線，未經 App 判斷。若某航點不在這裡，代表 API 沒有提供這條航線的資料。</div>
+    <input class="search" id="rawSearch" type="search" placeholder="篩選：例如 SGN、胡志明">
+    <div id="rawList"></div>
+    <button class="btn" type="button" id="rawClose">關閉</button>
+  </div>
 </dialog>
 
 <script>
@@ -314,6 +331,12 @@ function localParts(code, r, which, ms){
   const off = fixedOffsetFromRoute(r, which) ?? 0;
   const dt = new Date(ms + off*60000);
   return {y:dt.getUTCFullYear(), m:dt.getUTCMonth()+1, d:dt.getUTCDate(), h:dt.getUTCHours(), min:dt.getUTCMinutes(), wd:dt.getUTCDay()};
+}
+function daysZh(r){
+  if (!Array.isArray(r.days) || !r.days.length) return '未提供（App 視為每天）';
+  const ds = [1,2,3,4,5,6,0].filter(wd => operatesOn(r, wd));
+  if (ds.length === 7) return '每天';
+  return ds.length ? '週' + ds.map(d => WEEK_ZH[d]).join('、') : '無法解讀';
 }
 function operatesOn(r, wd){
   const days = r.days;
@@ -649,6 +672,20 @@ function render(){
     }
     html += `<div class="gtools"><button type="button" class="linkbtn" id="expandAll">全部展開</button><button type="button" class="linkbtn" id="collapseAll">全部收合</button></div>`;
   }
+  // 這一天沒有班的航點（API 有這條航線，但營運日不含這天）
+  {
+    const flying = new Set(board.map(x => x.dest));
+    const off = {};
+    for (const r of routes.out){ if (r.dep_iata === HOME && !flying.has(r.arr_iata)) (off[r.arr_iata] = off[r.arr_iata] || []).push(r); }
+    const codes = Object.keys(off).sort((a,b)=>REGION_ORDER.indexOf(REGION(a))-REGION_ORDER.indexOf(REGION(b)) || a.localeCompare(b));
+    if (codes.length){
+      const ok = 'x:off';
+      html += `<details class="grp" data-key="${ok}" ${openKeys.has(ok)?'open':''}><summary><span class="gname">這天沒有班的航點</span><span class="gcount">${codes.length} 個</span>
+        <div class="gdest">${esc(codes.map(nameOf).join('、'))}</div></summary>
+        <div class="gbody"><ul class="offday">${codes.map(c => `<li><b>${esc(nameOf(c))}</b>：${off[c].map(r => `${esc(fno(r))} ${esc(daysZh(r))}`).join('；')}</li>`).join('')}</ul>
+        <div class="note" style="padding:0 4px 10px">營運日來自 AirLabs，可能與星宇實際班表不同。</div></div></details>`;
+    }
+  }
   html += `<p class="note" style="margin-top:16px">資料來源：AirLabs API。班表更新於 ${new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}${live?'；即時狀態更新於 '+new Date(live.fetchedAt).toLocaleTimeString('zh-TW',{timeZone:TPE_TZ,hour:'2-digit',minute:'2-digit'}):''}。即時狀態只涵蓋接近起降時間的航班，其他顯示「表定」。正式資訊請以星宇航空官網／App 為準。</p>`;
   main.innerHTML = html;
   if (!q) for (const d of main.querySelectorAll('details.grp')) d.addEventListener('toggle', () => {
@@ -726,6 +763,22 @@ $('settingsForm').addEventListener('submit', e => {
     else render();
   }
 });
+function renderRaw(){
+  const q = ($('rawSearch').value || '').trim().toLowerCase();
+  if (!routes){ $('rawList').innerHTML = '<p class="note">尚未取得班表。</p>'; return; }
+  const all = [...routes.out.map(r => ({r, dir:'去程'})), ...routes.back.map(r => ({r, dir:'回程'}))];
+  const by = {};
+  for (const x of all){ const c = x.dir === '去程' ? x.r.arr_iata : x.r.dep_iata; (by[c] = by[c] || []).push(x); }
+  const codes = Object.keys(by).filter(c => !q || c.toLowerCase().includes(q) || nameOf(c).toLowerCase().includes(q) || by[c].some(x => fno(x.r).toLowerCase().includes(q)))
+    .sort((a,b)=>REGION_ORDER.indexOf(REGION(a))-REGION_ORDER.indexOf(REGION(b)) || a.localeCompare(b));
+  $('rawList').innerHTML = `<p class="note">共 ${Object.keys(by).length} 個航點、${all.length} 筆航線（班表抓取時間 ${new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}）</p>` +
+    (codes.length ? codes.map(c => `<div class="rawh">${esc(nameOf(c))} ${esc(c)}</div><table class="rawtbl"><tr><th></th><th>班號</th><th>起飛</th><th>抵達</th><th>營運日</th></tr>` +
+      by[c].sort((a,b)=>a.dir.localeCompare(b.dir)||String(a.r.dep_time).localeCompare(String(b.r.dep_time))).map(x => `<tr><td>${x.dir}</td><td>${esc(fno(x.r))}</td><td>${esc(x.r.dep_iata)} ${esc(x.r.dep_time||'?')}</td><td>${esc(x.r.arr_iata)} ${esc(x.r.arr_time||'?')}</td><td>${esc(daysZh(x.r))}<br><span class="note">原始：${esc(JSON.stringify(x.r.days ?? null))}</span></td></tr>`).join('') + '</table>').join('')
+    : '<p class="note">API 資料裡找不到符合的航點。</p>');
+}
+$('rawBtn').onclick = () => { $('settingsDlg').close(); $('rawSearch').value = ''; renderRaw(); $('rawDlg').showModal(); };
+$('rawSearch').oninput = renderRaw;
+$('rawClose').onclick = () => $('rawDlg').close();
 $('clearCacheBtn').onclick = () => { store.del('routes'); store.del('live'); routes = null; live = null; $('settingsDlg').close(); refresh(true, true); };
 
 let timer = null;
