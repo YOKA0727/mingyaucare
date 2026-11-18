@@ -303,11 +303,17 @@ async function api(endpoint, params){
   return Array.isArray(j.response) ? j.response : [];
 }
 async function apiAll(endpoint, params){
-  const limit = 500, out = [];
-  for (let page = 0; page < 6; page++){
-    const rows = await api(endpoint, Object.assign({}, params, {limit, offset: page*limit}));
-    out.push(...rows);
-    if (rows.length < limit) break;
+  // 方案可能限制每次回傳筆數（例如免費方案據稱每次最多 50 筆），所以依「實際拿到幾筆」往下翻頁，
+  // 直到拿不到新資料為止；最多 15 頁以免耗盡額度
+  const out = [], seen = new Set();
+  let offset = 0, pageSize = 0;
+  for (let page = 0; page < 15; page++){
+    const rows = await api(endpoint, Object.assign({}, params, {limit: 500, offset}));
+    let added = 0;
+    for (const r of rows){ const k = JSON.stringify([r.flight_iata, r.dep_iata, r.arr_iata, r.dep_time, r.days]); if (!seen.has(k)){ seen.add(k); out.push(r); added++; } }
+    if (!page) pageSize = rows.length;
+    if (!rows.length || !added || rows.length >= 500 || rows.length < pageSize) break;
+    offset += rows.length;
   }
   return out;
 }
