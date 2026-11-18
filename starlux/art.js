@@ -306,11 +306,12 @@ const imgOf = name => `art/country-${name}.jpg`;
 const imgTag = (name, size) => `<img src="${imgOf(name)}" width="${size}" height="${size}" alt="" loading="lazy" style="display:block;width:${size}px;height:${size}px">`;
 const countryIcon = (country, size = 44) => imgTag(COUNTRY_IMG[country] || 'other', size);
 const contIcon = (cont, size = 62) => imgTag(CONT_IMG[cont] || 'other', size);
-/* 城市橫幅：之後收到使用者的城市圖片，把代碼加進這裡即改用 art/banner-代碼.jpg */
-const CITY_IMG = new Set([]);
+/* 城市橫幅：使用者提供的色鉛筆風圖片（art/banner-*.jpg，檔名用圖上的城市簡稱） */
+const CITY_IMG = { NRT:'TYO', HND:'TYO', KIX:'OSA', CTS:'SPK', OKA:'OKA', MMY:'OKA', HKG:'HKG', MFM:'MFM', SGN:'SGN', HAN:'HAN', DAD:'DAD',
+  BKK:'BKK', SIN:'SIN', KUL:'KUL', MNL:'MNL', LAX:'LAX', ONT:'LAX', SFO:'SFO', SEA:'SEA', PRG:'PRG' };
 const motifOfCity = (code, country) => CITY_MOTIF[code] || (COUNTRY_ART[country] || COUNTRY_ART['其他'])[0];
 function bannerSvg(code, country){
-  if (CITY_IMG.has(code)) return `<div class="banner bimg"><img src="art/banner-${code}.jpg" alt="" loading="lazy"></div>`;
+  if (CITY_IMG[code]) return `<div class="banner bimg"><img src="art/banner-${CITY_IMG[code]}.jpg" alt="" loading="lazy"></div>`;
   const b = CITY_BANNER[code];
   // 沒有專屬橫幅的城市：用該國的色鉛筆插圖置中
   if (!b) return `<div class="banner bimg"><img class="sq" src="${imgOf(COUNTRY_IMG[country] || 'other')}" alt="" loading="lazy"></div>`;
