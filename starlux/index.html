@@ -61,7 +61,7 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--gold-soft);color:var(--gold);white-space:nowrap}
 .pin{background:none;border:0;font-size:20px;cursor:pointer;color:var(--muted);padding:0 2px}
 .pin.on{color:var(--gold)}
-.leg{display:grid;grid-template-columns:62px 1fr auto;gap:8px;align-items:center;padding:10px 0 2px}
+.leg{display:grid;grid-template-columns:70px 1fr auto;gap:8px;align-items:center;padding:10px 0 2px}
 .leg+.leg{border-top:1px dashed var(--line);margin-top:8px}
 .dir{font-size:11px;color:var(--muted)}
 .fno{font-weight:700;font-size:15px;color:var(--accent)}
@@ -86,6 +86,13 @@ label.f{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
 input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
 .btn{display:inline-block;border:0;background:var(--accent);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:15px;cursor:pointer;margin-top:12px}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.ovlist{margin-top:8px;border:1px solid var(--line);border-radius:12px;max-height:240px;overflow:auto}
+.ovrow{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-top:1px solid var(--line);font-size:14px}
+.ovrow:first-child{border-top:0}
+.ovrow select{font-size:14px;padding:4px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.tag.long{background:var(--info-bg);color:var(--info)} .tag.unsure{background:var(--warn-bg);color:var(--warn)}
+.why{font-size:11px;color:var(--muted);margin-top:4px}
+.altline{font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chips label{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;display:flex;align-items:center;gap:4px}
 dialog{border:0;border-radius:18px;padding:0;background:var(--card);color:var(--ink);width:min(520px,calc(100vw - 24px));max-height:88vh}
@@ -121,13 +128,21 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <label class="f" for="apiKey">AirLabs API Key</label>
     <input type="password" id="apiKey" autocomplete="off" placeholder="貼上 airlabs.co 的 API Key">
 
-    <label class="f">長途／隔天回程航點（勾選的航點只配對「過夜後」的回程班機）</label>
-    <div class="chips" id="longHaulChips"></div>
+    <label class="f">過夜判斷（預設「自動」；知道實際情況的航點可手動指定）</label>
+    <div class="note">自動判斷規則：抵達後 <b>折返等待上限</b> 內沒有回台班機 → 過夜；有折返班時估算工時（報到起飛前 1 小時 ＋ 去回飛行 ＋ 落地後 30 分），超過 <b>工時上限</b> → 過夜，介於兩個門檻之間 → 不確定（兩種回程都列）。這是用公開班表推算，<b>不等於真實組員排班</b>。</div>
+    <div id="ovList" class="ovlist"></div>
 
-    <label class="f" for="layoverH">過夜航點：抵達後至少隔幾小時才算回程班（預設 10）</label>
+    <label class="f" for="turnMaxH">折返等待上限（小時，預設 3）</label>
+    <input type="number" id="turnMaxH" min="1" max="12" step="0.5">
+    <label class="f" for="dutySureH">當天來回「確定」工時上限（小時，預設 11）</label>
+    <input type="number" id="dutySureH" min="4" max="20" step="0.5">
+    <label class="f" for="dutyMaxH">當天來回「可能」工時上限（小時，預設 13；超過即判過夜）</label>
+    <input type="number" id="dutyMaxH" min="4" max="24" step="0.5">
+
+    <label class="f" for="layoverH">過夜時：抵達後至少隔幾小時才算回程班（預設 10）</label>
     <input type="number" id="layoverH" min="1" max="72" step="1">
 
-    <label class="f" for="turnMin">一般航點：抵達後最短折返時間（分鐘，預設 40）</label>
+    <label class="f" for="turnMin">當天來回：抵達後最短折返時間（分鐘，預設 40）</label>
     <input type="number" id="turnMin" min="10" max="600" step="5">
 
     <label class="f"><input type="checkbox" id="autoRefresh"> App 開著時每 15 分鐘自動更新即時狀態（會消耗 API 次數）</label>
@@ -178,8 +193,6 @@ const AIRPORTS = {
 // 分區只影響畫面分組；不在上表的航點仍會顯示（名稱用代碼，分在「其他」）
 const REGION = code => AIRPORTS[code] ? AIRPORTS[code][2] : '其他';
 const REGION_ORDER = ['美洲','歐洲','日本','韓國','港澳','越南','菲律賓','泰國','新馬','台灣','其他'];
-// 使用者指定：美洲、歐洲、新加坡、吉隆坡、曼谷、東京、札幌 → 顯示隔天回程
-const DEFAULT_LONG = ['LAX','SFO','SEA','ONT','PHX','PRG','SIN','KUL','BKK','NRT','HND','CTS'];
 const WEEK = ['sun','mon','tue','wed','thu','fri','sat'];
 const WEEK_ZH = ['日','一','二','三','四','五','六'];
 
@@ -190,8 +203,10 @@ const store = {
   del(k){ try{ localStorage.removeItem('jx.'+k); }catch(e){} },
 };
 const settings = Object.assign({
-  apiKey:'', longHaul: DEFAULT_LONG.slice(), layoverH:10, turnMin:40, autoRefresh:false, pinned:[]
+  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[]
 }, store.get('settings', {}));
+delete settings.longHaul; // 舊版固定清單已改為自動判斷
+if (!settings.overrides || typeof settings.overrides !== 'object') settings.overrides = {};
 const saveSettings = () => store.set('settings', settings);
 
 let dayOffset = 0;          // 0=今天 1=明天 ...
@@ -328,6 +343,25 @@ async function loadLive(force){
 }
 
 /* ---------- 配對邏輯 ---------- */
+function findReturn(dest, outR, arrMs, minGapMs, maxGapMs){
+  const ap = localParts(dest, outR, 'arr', arrMs);
+  const cands = routes.back.filter(b => b.dep_iata === dest && b.arr_iata === HOME);
+  let best = null;
+  for (let k = -1; k <= 4; k++){
+    const dd = new Date(Date.UTC(ap.y, ap.m-1, ap.d) + k*86400e3);
+    const ly = dd.getUTCFullYear(), lm = dd.getUTCMonth()+1, ld = dd.getUTCDate(), lwd = dd.getUTCDay();
+    for (const b of cands){
+      if (!operatesOn(b, lwd)) continue;
+      const bdep = routeDepMs(b, ly, lm, ld);
+      if (bdep == null || bdep < arrMs + minGapMs) continue;
+      if (maxGapMs != null && bdep > arrMs + maxGapMs) continue;
+      if (!best || bdep < best.depMs) best = {r:b, depMs:bdep};
+    }
+  }
+  if (!best) return null;
+  const d = routeDurMin(best.r, best.depMs);
+  return {r:best.r, depMs:best.depMs, arrMs: d != null ? best.depMs + d*60000 : null};
+}
 function buildBoard(){
   if (!routes) return [];
   const now = Date.now();
@@ -343,28 +377,26 @@ function buildBoard(){
     const dur = routeDurMin(r, depMs);
     const arrMs = dur != null ? depMs + dur*60000 : null;
     const dest = r.arr_iata;
-    const isLong = settings.longHaul.includes(dest);
-    let ret = null;
+    let turn = null, night = null;
     if (arrMs != null){
-      const minGap = isLong ? settings.layoverH*3600e3 : settings.turnMin*60000;
-      const ap = localParts(dest, r, 'arr', arrMs);
-      const cands = routes.back.filter(b => b.dep_iata === dest && b.arr_iata === HOME);
-      for (let k = 0; k <= 4 && !ret; k++){
-        const dd = new Date(Date.UTC(ap.y, ap.m-1, ap.d) + k*86400e3);
-        const ly = dd.getUTCFullYear(), lm = dd.getUTCMonth()+1, ld = dd.getUTCDate(), lwd = dd.getUTCDay();
-        let best = null;
-        for (const b of cands){
-          if (!operatesOn(b, lwd)) continue;
-          const bdep = routeDepMs(b, ly, lm, ld); if (bdep == null || bdep < arrMs + minGap) continue;
-          if (!best || bdep < best.depMs) best = {r:b, depMs:bdep};
-        }
-        if (best){
-          const bd2 = routeDurMin(best.r, best.depMs);
-          ret = {r:best.r, depMs:best.depMs, arrMs: bd2 != null ? best.depMs + bd2*60000 : null};
-        }
-      }
+      turn = findReturn(dest, r, arrMs, settings.turnMin*60000, settings.turnMaxH*3600e3);
+      night = findReturn(dest, r, arrMs, settings.layoverH*3600e3, null);
     }
-    rows.push({r, dest, isLong, depMs, arrMs, ret, base});
+    // ---- 自動判斷（以公開班表推算，非真實組員排班）----
+    // 工時估算：報到約為起飛前 1 小時，下班約為落地後 30 分
+    const duty = turn && turn.arrMs ? (turn.arrMs - depMs)/3600e3 + 1.5 : null;
+    let cls, reason;
+    if (!turn){ cls = 'long'; reason = `抵達後 ${settings.turnMaxH} 小時內沒有飛回台北的班機`; }
+    else if (duty == null){ cls = 'unsure'; reason = '回程到達時間不明，無法估算工時'; }
+    else if (duty > settings.dutyMaxH){ cls = 'long'; reason = `當天來回估計工時約 ${duty.toFixed(1)} 小時，超過 ${settings.dutyMaxH} 小時`; }
+    else if (duty > settings.dutySureH){ cls = 'unsure'; reason = `當天來回估計工時約 ${duty.toFixed(1)} 小時，介於 ${settings.dutySureH}～${settings.dutyMaxH} 小時`; }
+    else { cls = 'short'; reason = `有折返班，估計工時約 ${duty.toFixed(1)} 小時`; }
+    const ov = settings.overrides[dest];
+    let manual = false;
+    if (ov === 'long' || ov === 'short'){ cls = ov; manual = true; reason = '手動設定'; }
+    const ret = cls === 'long' ? night : (turn || night);
+    const alt = cls === 'long' ? null : (night && (!turn || night.r !== turn.r || night.depMs !== turn.depMs) ? night : null);
+    rows.push({r, dest, cls, reason, manual, depMs, arrMs, ret, alt, base});
   }
   rows.sort((a,b) => a.depMs - b.depMs);
   return rows;
@@ -427,7 +459,7 @@ function renderTabs(){
   $('dateLabel').textContent = `台北出發 ${d0.getUTCFullYear()}/${d0.getUTCMonth()+1}/${d0.getUTCDate()}（${WEEK_ZH[d0.getUTCDay()]}）・時間皆為當地時間`;
 }
 
-function legHtml(kind, r, depMs, arrMs, base){
+function legHtml(kind, r, depMs, arrMs, base, label){
   const from = r.dep_iata, to = r.arr_iata;
   const dp = localParts(from, r, 'dep', depMs);
   const ap = arrMs != null ? localParts(to, r, 'arr', arrMs) : null;
@@ -435,7 +467,7 @@ function legHtml(kind, r, depMs, arrMs, base){
   const s = liveFor(r, depMs);
   const daysNote = (!Array.isArray(r.days) || !r.days.length) ? '・API 未提供營運日' : '';
   return `<div class="leg">
-    <div><div class="dir">${kind==='out'?'去程':'回程'}</div><div class="fno">${esc(fno(r))}</div></div>
+    <div><div class="dir">${label || (kind==='out'?'去程':'回程')}</div><div class="fno">${esc(fno(r))}</div></div>
     <div>
       <div class="times">${esc(from)} ${fmt(dp)}${dlab?`<span class="d">${dlab}</span>`:''}<span class="arrow">→</span>${esc(to)} ${ap?fmt(ap):'--:--'}${alab?`<span class="d">${alab}</span>`:''}</div>
       <div class="sub">${esc(nameOf(from))} → ${esc(nameOf(to))}${r.aircraft_icao?'・'+esc(r.aircraft_icao):''}${daysNote}</div>
@@ -446,6 +478,16 @@ function legHtml(kind, r, depMs, arrMs, base){
   </div>`;
 }
 
+function tagHtml(x){
+  const m = x.manual ? '（手動）' : '（推算）';
+  if (x.cls === 'long') return `<span class="tag long">過夜${m}</span>`;
+  if (x.cls === 'unsure') return '<span class="tag unsure">不確定・兩種都列</span>';
+  return `<span class="tag">當天來回${m}</span>`;
+}
+function altLine(x){
+  const a = x.alt, p = a.arrMs ? partsIn(TPE_TZ, a.arrMs) : null;
+  return `<div class="altline">若其實是過夜：${esc(fno(a.r))}，${p ? fmt(p)+' '+(dayDiffLabel(p, x.base)||'當天')+' 抵台' : '抵台時間不明'}</div>`;
+}
 function render(){
   renderTabs();
   const main = $('main');
@@ -506,12 +548,15 @@ function render(){
           <div class="chead">
             <div class="dest">${esc(nameOf(x.dest))}${nameOf(x.dest)!==x.dest?`<span class="code">${esc(x.dest)}</span>`:''}</div>
             <div style="display:flex;gap:6px;align-items:center">
-              ${x.isLong ? '<span class="tag">過夜・隔天回程</span>' : '<span class="tag">當天來回</span>'}
+              ${tagHtml(x)}
               <button class="pin ${pinned.has(x.dest)?'on':''}" data-pin="${esc(x.dest)}" aria-label="釘選">${pinned.has(x.dest)?'★':'☆'}</button>
             </div>
           </div>
           ${legHtml('out', x.r, x.depMs, x.arrMs, x.base)}
-          ${x.ret ? legHtml('back', x.ret.r, x.ret.depMs, x.ret.arrMs, x.base) : '<div class="sub" style="padding-top:8px">找不到符合條件的回程班機（可在設定調整過夜時數）</div>'}
+          ${x.ret ? legHtml('back', x.ret.r, x.ret.depMs, x.ret.arrMs, x.base, x.cls==='long'?'回程（過夜）':'回程（當天）') : '<div class="sub" style="padding-top:8px">找不到符合條件的回程班機（可在設定調整時數）</div>'}
+          ${x.alt && x.cls==='unsure' ? legHtml('back', x.alt.r, x.alt.depMs, x.alt.arrMs, x.base, '回程（若過夜）') : ''}
+          ${x.alt && x.cls==='short' ? altLine(x) : ''}
+          <div class="why">判斷依據：${esc(x.reason)}</div>
         </div>`;
       }
     }
@@ -552,9 +597,18 @@ function openSettings(){
   $('layoverH').value = settings.layoverH;
   $('turnMin').value = settings.turnMin;
   $('autoRefresh').checked = !!settings.autoRefresh;
-  const codes = new Set([...DEFAULT_LONG, ...settings.longHaul, ...(routes ? routes.out.map(r => r.arr_iata) : [])]);
-  $('longHaulChips').innerHTML = [...codes].filter(Boolean).sort((a,b)=>REGION_ORDER.indexOf(REGION(a))-REGION_ORDER.indexOf(REGION(b)) || a.localeCompare(b))
-    .map(c => `<label><input type="checkbox" value="${esc(c)}" ${settings.longHaul.includes(c)?'checked':''}>${esc(nameOf(c))}</label>`).join('');
+  $('turnMaxH').value = settings.turnMaxH;
+  $('dutySureH').value = settings.dutySureH;
+  $('dutyMaxH').value = settings.dutyMaxH;
+  const codes = new Set([...Object.keys(settings.overrides), ...(routes ? routes.out.map(r => r.arr_iata) : [])]);
+  const list = [...codes].filter(Boolean).sort((a,b)=>REGION_ORDER.indexOf(REGION(a))-REGION_ORDER.indexOf(REGION(b)) || a.localeCompare(b));
+  $('ovList').innerHTML = list.length ? list.map(c => {
+    const v = settings.overrides[c] || 'auto';
+    return `<div class="ovrow"><span>${esc(nameOf(c))} <span class="note">${esc(c)}</span></span><select data-ov="${esc(c)}">
+      <option value="auto" ${v==='auto'?'selected':''}>自動</option>
+      <option value="long" ${v==='long'?'selected':''}>一定過夜</option>
+      <option value="short" ${v==='short'?'selected':''}>一定當天來回</option></select></div>`;
+  }).join('') : '<div class="ovrow note">讀到班表後會列出所有航點</div>';
   $('settingsDlg').showModal();
 }
 $('settingsBtn').onclick = openSettings;
@@ -565,7 +619,12 @@ $('settingsForm').addEventListener('submit', e => {
     settings.layoverH = Math.max(1, +$('layoverH').value || 10);
     settings.turnMin = Math.max(10, +$('turnMin').value || 40);
     settings.autoRefresh = $('autoRefresh').checked;
-    settings.longHaul = [...$('longHaulChips').querySelectorAll('input:checked')].map(i => i.value);
+    settings.turnMaxH = Math.max(1, +$('turnMaxH').value || 3);
+    settings.dutySureH = Math.max(4, +$('dutySureH').value || 11);
+    settings.dutyMaxH = Math.max(settings.dutySureH, +$('dutyMaxH').value || 13);
+    const ov = {};
+    for (const sel of $('ovList').querySelectorAll('select[data-ov]')) if (sel.value !== 'auto') ov[sel.dataset.ov] = sel.value;
+    settings.overrides = ov;
     saveSettings();
     setupAuto();
     if (keyChanged){ routes = null; live = null; store.del('routes'); store.del('live'); refresh(true, true); }
