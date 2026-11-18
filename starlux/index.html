@@ -53,6 +53,22 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .nrow .big{font-size:17px;font-weight:700}
 .nrow .cd{font-size:13px;color:var(--gold);white-space:nowrap}
 .search{width:100%;margin-top:14px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px}
+.grp{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:10px}
+.grp>summary{list-style:none;cursor:pointer;padding:14px 40px 14px 16px;position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.grp>summary::-webkit-details-marker{display:none}
+.grp>summary::after{content:'›';position:absolute;right:16px;top:12px;font-size:22px;color:var(--muted);transition:transform .15s}
+.grp[open]>summary::after{transform:rotate(90deg)}
+.grp .gname{font-size:17px;font-weight:700}
+.grp .gsub{font-size:13px;color:var(--muted);font-weight:500}
+.grp .gcount{font-size:12px;color:var(--gold);background:var(--gold-soft);padding:2px 8px;border-radius:999px}
+.grp .gdest{flex-basis:100%;font-size:12px;color:var(--muted);line-height:1.5}
+.grp .gbody{padding:0 10px 4px}
+.grp.country{background:var(--bg);border-radius:14px}
+.grp.country>summary{padding:12px 36px 12px 14px}
+.grp.country .gname{font-size:15px}
+.grp .card{background:var(--card)}
+.gtools{display:flex;gap:16px;justify-content:center;margin:6px 0}
+.linkbtn{background:none;border:0;color:var(--gold);font-size:14px;cursor:pointer;padding:6px}
 .group-title{font-size:13px;color:var(--muted);margin:18px 2px 8px;letter-spacing:1px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:10px}
 .card.pinned{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
@@ -174,9 +190,9 @@ const LIVE_TTL = 10 * 60e3;
 // 航點中文名稱與時區（僅作顯示與時間換算；未列出的航點會顯示 IATA 代碼並改用 API 的 UTC 時間）
 const AIRPORTS = {
   TPE:['台北桃園','Asia/Taipei','台灣'], RMQ:['台中','Asia/Taipei','台灣'], KHH:['高雄','Asia/Taipei','台灣'],
-  LAX:['洛杉磯','America/Los_Angeles','美洲'], SFO:['舊金山','America/Los_Angeles','美洲'], SEA:['西雅圖','America/Los_Angeles','美洲'],
-  ONT:['安大略','America/Los_Angeles','美洲'], PHX:['鳳凰城','America/Phoenix','美洲'], GUM:['關島','Pacific/Guam','美洲'],
-  PRG:['布拉格','Europe/Prague','歐洲'],
+  LAX:['洛杉磯','America/Los_Angeles','美國'], SFO:['舊金山','America/Los_Angeles','美國'], SEA:['西雅圖','America/Los_Angeles','美國'],
+  ONT:['安大略','America/Los_Angeles','美國'], PHX:['鳳凰城','America/Phoenix','美國'], GUM:['關島','Pacific/Guam','美國'],
+  PRG:['布拉格','Europe/Prague','捷克'],
   NRT:['東京成田','Asia/Tokyo','日本'], HND:['東京羽田','Asia/Tokyo','日本'], CTS:['札幌','Asia/Tokyo','日本'],
   KIX:['大阪','Asia/Tokyo','日本'], UKB:['神戶','Asia/Tokyo','日本'], NGO:['名古屋','Asia/Tokyo','日本'],
   FUK:['福岡','Asia/Tokyo','日本'], OKA:['沖繩','Asia/Tokyo','日本'], MMY:['宮古島','Asia/Tokyo','日本'],
@@ -188,12 +204,14 @@ const AIRPORTS = {
   DAD:['峴港','Asia/Ho_Chi_Minh','越南'], PQC:['富國島','Asia/Ho_Chi_Minh','越南'], CXR:['芽莊','Asia/Ho_Chi_Minh','越南'],
   MNL:['馬尼拉','Asia/Manila','菲律賓'], CEB:['宿霧','Asia/Manila','菲律賓'], CRK:['克拉克','Asia/Manila','菲律賓'],
   BKK:['曼谷','Asia/Bangkok','泰國'], CNX:['清邁','Asia/Bangkok','泰國'], HKT:['普吉島','Asia/Bangkok','泰國'],
-  SIN:['新加坡','Asia/Singapore','新馬'], KUL:['吉隆坡','Asia/Kuala_Lumpur','新馬'], PEN:['檳城','Asia/Kuala_Lumpur','新馬'],
-  CGK:['雅加達','Asia/Jakarta','其他'], DPS:['峇里島','Asia/Makassar','其他'],
+  SIN:['新加坡','Asia/Singapore','新加坡'], KUL:['吉隆坡','Asia/Kuala_Lumpur','馬來西亞'], PEN:['檳城','Asia/Kuala_Lumpur','馬來西亞'],
+  CGK:['雅加達','Asia/Jakarta','印尼'], DPS:['峇里島','Asia/Makassar','印尼'],
 };
-// 分區只影響畫面分組；不在上表的航點仍會顯示（名稱用代碼，分在「其他」）
-const REGION = code => AIRPORTS[code] ? AIRPORTS[code][2] : '其他';
-const REGION_ORDER = ['美洲','歐洲','日本','韓國','港澳','越南','菲律賓','泰國','新馬','台灣','其他'];
+// 分組只影響畫面；不在上表的航點仍會顯示（名稱用代碼，分在「其他」）
+const REGION = code => AIRPORTS[code] ? AIRPORTS[code][2] : '其他';   // 國家／地區
+const REGION_ORDER = ['美國','捷克','日本','韓國','港澳','越南','菲律賓','泰國','新加坡','馬來西亞','印尼','台灣','其他'];
+const CONTINENT = country => country === '美國' ? '美洲' : country === '捷克' ? '歐洲' : country === '其他' ? '其他' : '亞洲';
+const CONTINENT_ORDER = ['亞洲','美洲','歐洲','其他'];
 const WEEK = ['sun','mon','tue','wed','thu','fri','sat'];
 const WEEK_ZH = ['日','一','二','三','四','五','六'];
 
@@ -214,6 +232,7 @@ let dayOffset = 0;          // 0=今天 1=明天 ...
 let routes = null;          // {out:[], back:[], fetchedAt}
 let live = null;            // {map:{key:obj}, fetchedAt}
 let query = '';
+const openKeys = new Set(store.get('open', []));  // 記住哪些分組是展開的（只存在這支手機）
 let lastError = '';
 
 /* ---------- 時間工具 ---------- */
@@ -545,13 +564,7 @@ function render(){
   if (!list.length){
     html += `<div class="empty">${board.length ? '找不到符合的航班' : '這一天 API 沒有回傳從台北出發的星宇航班。<br>若持續如此，請到設定「清除班表快取並重抓」。'}</div>`;
   } else {
-    const groups = {};
-    for (const x of list){ const g = pinned.has(x.dest) ? '★ 釘選' : REGION(x.dest); (groups[g] = groups[g] || []).push(x); }
-    for (const g of ['★ 釘選', ...REGION_ORDER]){
-      if (!groups[g]) continue;
-      html += `<div class="group-title">${g}</div>`;
-      for (const x of groups[g]){
-        html += `<div class="card ${pinned.has(x.dest)?'pinned':''}">
+    const cardHtml = x => `<div class="card ${pinned.has(x.dest)?'pinned':''}">
           <div class="chead">
             <div class="dest">${esc(nameOf(x.dest))}${nameOf(x.dest)!==x.dest?`<span class="code">${esc(x.dest)}</span>`:''}</div>
             <div style="display:flex;gap:6px;align-items:center">
@@ -565,11 +578,56 @@ function render(){
           ${x.alt && x.cls==='short' ? altLine(x) : ''}
           <div class="why">判斷依據：${esc(x.reason)}</div>
         </div>`;
-      }
+    const searching = !!q;
+    const isOpen = k => searching || openKeys.has(k);
+    const destNames = rows => [...new Set(rows.map(x => nameOf(x.dest)))].join('、');
+    // 釘選：固定展開在最上方
+    const pinRows = list.filter(x => pinned.has(x.dest));
+    if (pinRows.length){
+      html += '<div class="group-title">★ 釘選</div>' + pinRows.map(cardHtml).join('');
     }
+    // 洲 → 國家 → 航班，預設收合
+    const tree = {};
+    for (const x of list){
+      if (pinned.has(x.dest)) continue;
+      const country = REGION(x.dest), cont = CONTINENT(country);
+      ((tree[cont] = tree[cont] || {})[country] = tree[cont][country] || []).push(x);
+    }
+    html += '<div class="group-title">全部航點（點選展開）</div>';
+    for (const cont of CONTINENT_ORDER){
+      if (!tree[cont]) continue;
+      const countries = REGION_ORDER.filter(c => tree[cont][c]);
+      const all = countries.flatMap(c => tree[cont][c]);
+      const ck = 'c:'+cont;
+      const single = countries.length === 1;
+      html += `<details class="grp cont" data-key="${esc(ck)}" ${isOpen(ck)?'open':''}>
+        <summary><span class="gname">${esc(cont)}${single && countries[0] !== cont ? `<span class="gsub">　${esc(countries[0])}</span>` : ''}</span><span class="gcount">${all.length} 班</span>
+        <div class="gdest">${esc(single ? destNames(all) : countries.join('、'))}</div></summary>
+        <div class="gbody">`;
+      if (single){
+        html += all.map(cardHtml).join('');
+      } else {
+        for (const c of countries){
+          const rows = tree[cont][c], nk = 'n:'+c;
+          html += `<details class="grp country" data-key="${esc(nk)}" ${isOpen(nk)?'open':''}>
+            <summary><span class="gname">${esc(c)}</span><span class="gcount">${rows.length} 班</span>
+            <div class="gdest">${esc(destNames(rows))}</div></summary>
+            <div class="gbody">${rows.map(cardHtml).join('')}</div></details>`;
+        }
+      }
+      html += '</div></details>';
+    }
+    html += `<div class="gtools"><button type="button" class="linkbtn" id="expandAll">全部展開</button><button type="button" class="linkbtn" id="collapseAll">全部收合</button></div>`;
   }
   html += `<p class="note" style="margin-top:16px">資料來源：AirLabs API。班表更新於 ${new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}${live?'；即時狀態更新於 '+new Date(live.fetchedAt).toLocaleTimeString('zh-TW',{timeZone:TPE_TZ,hour:'2-digit',minute:'2-digit'}):''}。即時狀態只涵蓋接近起降時間的航班，其他顯示「表定」。正式資訊請以星宇航空官網／App 為準。</p>`;
   main.innerHTML = html;
+  if (!q) for (const d of main.querySelectorAll('details.grp')) d.addEventListener('toggle', () => {
+    if (d.open) openKeys.add(d.dataset.key); else openKeys.delete(d.dataset.key);
+    store.set('open', [...openKeys]);
+  });
+  const ea = $('expandAll'), ca = $('collapseAll');
+  if (ea) ea.onclick = () => { for (const d of main.querySelectorAll('details.grp')) openKeys.add(d.dataset.key); store.set('open', [...openKeys]); render(); };
+  if (ca) ca.onclick = () => { openKeys.clear(); store.set('open', []); render(); };
   const s = $('search');
   s.oninput = e => { query = e.target.value; const pos = e.target.selectionStart; render(); const n = $('search'); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(_){} };
 }
