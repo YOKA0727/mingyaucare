@@ -1,200 +1,243 @@
 <!doctype html>
-<html lang="zh-Hant" data-theme="dark">
+<html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>老大航班</title>
 <meta name="description" content="星宇航空台北出發與回程班機的每日通知中心（資料來源：AirLabs API）">
-<meta name="theme-color" content="#16111d">
+<meta name="theme-color" content="#FFFCF6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="老大航班">
-<link rel="manifest" href="manifest.json?v=3">
+<link rel="manifest" href="manifest.json?v=4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" sizes="512x512" href="laoda-icon-512.png">
-<link rel="apple-touch-icon" sizes="180x180" href="laoda-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Michroma&family=Gochi+Hand&family=Courier+Prime:wght@700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="512x512" href="laoda-crew-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="laoda-crew-180.png">
 <style>
+/* 日系繪本風 × 星宇色系：和紙白底、3px 金屬灰線框、大圓角、平塗 */
 :root{
-  --bg:#f4f1ea; --card:#ffffff; --ink:#1b2236; --muted:#6b7183; --line:#e4dfd3;
-  --gold:#a8843f; --gold-soft:#f3ead7; --accent:#1b2a4a;
-  --ok:#2f7d4f; --ok-bg:#e3f2e8; --warn:#9a5b00; --warn-bg:#fdf0d9; --bad:#b23a3a; --bad-bg:#fbe4e4; --info:#2c5aa0; --info-bg:#e3ecfa;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#16111d; --card:#211a2b; --ink:#f7eef4; --muted:#b9a8bd; --line:#3a2c45;
-    --gold:#f5a9c6; --gold-soft:#3b2333; --accent:#f5a9c6; --accent2:#ffd6a5;
-    --ok:#7fd3a0; --ok-bg:#16301f; --warn:#f2c06b; --warn-bg:#33270f; --bad:#f19a9a; --bad-bg:#3a1a1a; --info:#9cbcf2; --info-bg:#182a48;
-  }
-}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --bg:#16111d; --card:#211a2b; --ink:#f7eef4; --muted:#b9a8bd; --line:#3a2c45;
-  --gold:#f5a9c6; --gold-soft:#3b2333; --accent:#f5a9c6; --accent2:#ffd6a5;
-  --ok:#7fd3a0; --ok-bg:#16301f; --warn:#f2c06b; --warn-bg:#33270f; --bad:#f19a9a; --bad-bg:#3a1a1a; --info:#9cbcf2; --info-bg:#182a48;
+  --paper:#FFFCF6; --ink:#404B4E;                 /* 星宇 Pantone 10393C 金屬灰 */
+  --copper:#90664D; --gold:#80724E;               /* 星宇 Pantone 876C 銅、871C 金 */
+  --copper-s:#EBD8C9; --gold-s:#E8E0C6;            /* 同色系淺色（平塗） */
+  --coral:#F2A497; --yellow:#E3D3A6; --mizu:#C3DCE4; --green:#C9D5AC;
+  --muted:rgba(64,75,78,.62); --line:3px solid var(--ink); --line2:2.5px solid var(--ink); --r:24px;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
-/* ---- 首頁照片橫幅 ---- */
-.hero{position:relative;max-width:560px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 16px 0}
-.hero-card{position:relative;border-radius:26px;overflow:hidden;box-shadow:0 10px 30px rgba(245,169,198,.18),0 0 0 1px rgba(245,169,198,.25)}
-.hero-card img{display:block;width:100%;height:clamp(260px,72vw,380px);object-fit:cover;object-position:50% 28%}
-.hero-card::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,17,29,0) 45%,rgba(22,17,29,.55) 70%,rgba(22,17,29,.95) 100%)}
-.hero-text{position:absolute;left:0;right:0;bottom:16px;z-index:1;text-align:center}
-.hero-names{font-family:"Pacifico",cursive;font-size:30px;color:#fff;text-shadow:0 2px 12px rgba(245,169,198,.6);letter-spacing:.5px;line-height:1.2}
-.hero-names .amp{color:var(--accent2,#ffd6a5);margin:0 4px}
-.hero-wish{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 16px;border-radius:999px;background:rgba(245,169,198,.18);border:1px solid rgba(245,169,198,.45);color:#ffe3ee;font-family:"Zen Maru Gothic","PingFang TC",sans-serif;font-weight:700;font-size:15px;letter-spacing:3px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-.hearts span{position:absolute;color:#f5a9c6;opacity:.85;animation:floaty 4s ease-in-out infinite;z-index:1;font-size:16px;pointer-events:none}
-.hearts span:nth-child(1){left:8%;top:14%;animation-delay:0s}
-.hearts span:nth-child(2){right:9%;top:22%;font-size:12px;animation-delay:1.2s}
-.hearts span:nth-child(3){left:14%;bottom:30%;font-size:11px;animation-delay:2.1s}
-.hearts span:nth-child(4){right:15%;bottom:36%;animation-delay:.6s}
-@keyframes floaty{0%,100%{transform:translateY(0) scale(1);opacity:.85}50%{transform:translateY(-8px) scale(1.15);opacity:1}}
-@media (prefers-reduced-motion: reduce){.hearts span{animation:none}}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-text-size-adjust:100%}
-body{padding:0 0 calc(24px + env(safe-area-inset-bottom));background-image:radial-gradient(600px 300px at 50% -80px,rgba(245,169,198,.14),transparent 70%)}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:"Huninn","PingFang TC","Noto Sans TC",sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom))}
 .wrap{max-width:560px;margin:0 auto;padding:0 16px}
-header{position:sticky;top:0;z-index:5;background:rgba(22,17,29,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:calc(10px + env(safe-area-inset-top)) 0 10px;margin-top:6px;border-bottom:1px solid var(--line)}
-.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-h1{font-size:20px;margin:0;letter-spacing:.5px}
-h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
-.icon-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;min-width:40px;height:40px;font-size:18px;cursor:pointer}
-.tabs{display:flex;gap:6px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
-.tabs button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:999px;font-size:14px;cursor:pointer}
-.tabs button.on{background:linear-gradient(135deg,#f5a9c6,#ffc9a8);color:#2a1424;border-color:transparent;font-weight:700;box-shadow:0 4px 14px rgba(245,169,198,.3)}
-.status-line{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px}
-.notice{background:linear-gradient(160deg,#2a1f35,#211a2b 60%);border:1px solid rgba(245,169,198,.3);border-radius:20px;padding:14px;margin-top:14px}
-.notice h2{font-size:13px;margin:0 0 10px;color:var(--gold);letter-spacing:1px}
-.notice h2::before{content:'♡ '}
-.nrow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px dashed var(--line);gap:10px}
-.nrow:first-of-type{border-top:0}
+.lat{font-family:"Michroma","Huninn",sans-serif;letter-spacing:.3px}
+.hand{font-family:"Gochi Hand","Huninn",cursive}
+.muted{color:var(--muted)}
+button{font-family:inherit;color:inherit}
+.card{background:var(--paper);border:var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.pill{white-space:nowrap;display:inline-flex;align-items:center;gap:4px;border:var(--line);border-radius:999px;padding:5px 12px;font-size:13px;background:var(--paper);color:var(--ink);line-height:1.25;text-decoration:none;cursor:pointer}
+.pill.sm{font-size:11px;padding:3px 9px;border:var(--line2)}
+.pill.copper{background:var(--copper);color:var(--paper)} .pill.gold{background:var(--gold);color:var(--paper)}
+.pill.cs{background:var(--copper-s)} .pill.gs{background:var(--gold-s)} .pill.green{background:var(--green)} .pill.mizu{background:var(--mizu)} .pill.coral{background:var(--coral)} .pill.yellow{background:var(--yellow)}
+
+/* 頂部品牌列 */
+.top{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .bm{height:40px;display:block}
+.brand .bt{font-size:22px;line-height:1.1}
+.brand .bw{height:11px;display:block;margin-top:5px}
+.iconbtn{width:42px;height:42px;border:var(--line);border-radius:50%;background:var(--paper);font-size:18px;display:grid;place-items:center;cursor:pointer}
+.iconbtn.gs{background:var(--gold-s)}
+
+/* 主視覺 */
+.hero .crew{display:block;width:100%;aspect-ratio:352/420;height:auto;object-fit:cover;object-position:50% 30%;border-bottom:var(--line)}
+.hero .band{padding:10px 14px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hero .who{display:flex;align-items:center;gap:10px;min-width:0}
+.hero .ava{width:46px;height:46px;border-radius:50%;border:var(--line);object-fit:cover;object-position:50% 20%;flex:0 0 auto}
+.hero .names{font-size:20px;white-space:nowrap}
+.hero .names .h{color:var(--copper)}
+
+/* Sophie's flight：登機票＋信封 */
+.sf-title{display:flex;align-items:baseline;gap:10px;margin:6px 2px 8px}
+.sf-title .hand{font-size:34px;line-height:1;transform:rotate(-3deg);display:inline-block}
+.sf-title .q{font-size:15px;color:var(--copper)}
+.sf{position:relative;padding-top:104px;margin-bottom:18px}
+.ticket{position:absolute;left:14px;right:22px;top:0;height:126px;background:var(--paper);border:var(--line);border-radius:14px;padding:12px 18px;transform:rotate(-2.5deg);overflow:hidden;z-index:1}
+.notch{position:absolute;top:46px;width:22px;height:22px;border-radius:50%;background:var(--paper);border:var(--line)}
+.notch.l{left:-13px} .notch.r{right:-13px}
+.tk-top{display:flex;justify-content:space-between;align-items:center;font-family:"Courier Prime",monospace;font-weight:700;font-size:12px;color:var(--muted)}
+.tk-name{letter-spacing:4px;display:flex;align-items:center}
+.tk-name img{height:15px;margin-right:6px}
+.tk-route{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.tk-code{font-family:"Courier Prime",monospace;font-weight:700;font-size:38px;line-height:1}
+.tk-city{font-size:12px;color:var(--muted);margin-top:2px}
+.tk-mid{flex:1;display:flex;justify-content:center;align-items:center;position:relative;margin:0 10px 14px}
+.tk-mid::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:3px dashed rgba(64,75,78,.3)}
+.tk-mid svg{position:relative;background:var(--paper);padding:0 4px}
+.spin{position:absolute;left:-36px;top:104px;z-index:3;transform:rotate(-58deg);pointer-events:none}
+.env{position:relative;z-index:2;background:var(--copper-s);border:var(--line);border-radius:20px;padding:58px 16px 16px;overflow:hidden}
+.env .flap{position:absolute;left:0;top:0;width:100%;height:52px}
+.env .stamp{position:absolute;right:14px;top:14px;width:58px;height:58px;padding:3px;background:var(--paper);border:2.5px dashed var(--ink);border-radius:8px;transform:rotate(6deg);display:grid;place-items:center;z-index:1}
+.env .stamp svg{border-radius:4px;display:block}
+.kv{display:flex;gap:10px;margin-top:8px;font-size:15px;align-items:baseline;flex-wrap:wrap}
+.kv .k{min-width:34px;color:var(--muted)}
+.kv b{font-weight:400;font-size:13px;font-family:"Michroma",sans-serif;color:var(--copper)}
+.kv .d{font-size:11px;color:var(--copper)}
+.tm-term{background:var(--gold-s);border:var(--line2);border-radius:8px;padding:0 6px;font-size:13px}
+.count{margin-top:12px;border:var(--line);border-radius:18px;background:var(--paper);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px}
+.count .lab{font-size:12px}
+.count .big{font-size:30px;color:var(--copper);line-height:1.15}
+.count .big span{font-size:15px}
+.count .big.done{font-size:20px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sf-empty{border:3px dashed rgba(64,75,78,.45);border-radius:20px;padding:14px 16px;font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7}
+
+/* 日期列（往下滑時固定在上方） */
+.daybar{position:sticky;top:0;z-index:5;background:var(--paper);margin:0 -16px 14px;padding:10px 16px 8px;border-bottom:var(--line)}
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:0 0 auto;font-size:14px;padding:6px 14px}
+.tabs button.on{background:var(--copper);color:var(--paper)}
+.status-line{font-size:11px;color:var(--muted);margin-top:6px;min-height:14px}
+
+/* 通知 */
+.notice .nh{padding:10px 16px;border-bottom:var(--line);background:var(--gold-s);font-size:15px;display:flex;align-items:center;gap:6px}
+.notice .nh .st{color:var(--copper)}
+.nrow{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;gap:10px}
+.nrow+.nrow{border-top:2.5px dashed rgba(64,75,78,.3)}
 .nrow .lbl{font-size:12px;color:var(--muted)}
-.nrow .big{font-size:17px;font-weight:700}
-.nrow .cd{font-size:13px;color:var(--gold);white-space:nowrap}
-.search{width:100%;margin-top:14px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px}
-.grp{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:10px}
-.grp>summary{list-style:none;cursor:pointer;padding:14px 40px 14px 16px;position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.nrow .big{font-size:16px;margin-top:2px}
+.nrow .note{margin:0}
+.notice .empty-n{padding:12px 16px;font-size:13px;color:var(--muted)}
+.search{display:block;width:100%;padding:11px 16px;border:var(--line);border-radius:999px;background:var(--paper);font-family:inherit;font-size:15px;color:var(--ink);margin-bottom:16px}
+.search::placeholder{color:var(--muted)}
+
+/* 分組（洲 → 國家） */
+.group-title{font-size:13px;color:var(--muted);margin:4px 4px 10px;letter-spacing:1px}
+.grp{background:var(--paper);border:var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.grp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 40px 12px 14px;position:relative}
 .grp>summary::-webkit-details-marker{display:none}
-.grp>summary::after{content:'›';position:absolute;right:16px;top:12px;font-size:22px;color:var(--muted);transition:transform .15s}
-.grp[open]>summary::after{transform:rotate(90deg)}
-.grp .gname{font-size:17px;font-weight:700}
-.grp .gsub{font-size:13px;color:var(--muted);font-weight:500}
-.grp .gcount{font-size:12px;color:var(--gold);background:var(--gold-soft);padding:2px 8px;border-radius:999px}
-.grp .gdest{flex-basis:100%;font-size:12px;color:var(--muted);line-height:1.5}
-.grp .gbody{padding:0 10px 4px}
-.grp.country{background:var(--bg);border-radius:14px}
-.grp.country>summary{padding:12px 36px 12px 14px}
-.grp.country .gname{font-size:15px}
-.grp .card{background:var(--card)}
-.rawtbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
-.rawtbl td,.rawtbl th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
-.rawtbl th{color:var(--muted);font-weight:500}
-.rawh{font-weight:700;margin-top:14px}
-.offday{font-size:13px;line-height:1.7}
-.offday li{margin:2px 0}
-.vlinks{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px}
-.vlinks .vl-l{color:var(--muted)}
-.vrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.vl-n{min-width:62px;font-weight:700;color:var(--ink)}
-.vlinks a{color:var(--accent);text-decoration:none;border:1px solid rgba(245,169,198,.4);border-radius:999px;padding:4px 10px;background:rgba(245,169,198,.08)}
-.herbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
-.herbar.on{background:rgba(245,169,198,.1);border:1px solid rgba(245,169,198,.35);border-radius:14px;padding:8px 10px}
-.herlbl{font-weight:700;color:var(--accent);font-size:14px;margin-right:4px}
-.hbtn{border:1px solid rgba(245,169,198,.45);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
-.hbtn.main{background:linear-gradient(135deg,#f5a9c6,#ffc9a8);color:#2a1424;border:0;font-weight:700}
-.hbtn.on{background:var(--accent);color:#2a1424;border-color:var(--accent);font-weight:700}
-.hbtn.ghost{border-color:var(--line);color:var(--muted)}
-.seg{display:inline-flex;gap:4px}
-.card.hercard{border-color:#f5a9c6;box-shadow:0 0 0 1px #f5a9c6 inset,0 6px 20px rgba(245,169,198,.15)}
-.notice.her{border-color:#f5a9c6;background:linear-gradient(160deg,#3a2133,#241a2c 70%)}
-.notice.her h2::before{content:'💗 '}
-.herrow{padding:10px 0;border-top:1px dashed var(--line);cursor:pointer}
-.herrow:first-of-type{border-top:0;padding-top:2px}
-.herrow .lbl{font-size:12px;color:var(--accent)}
-.herrow .big{font-size:17px;font-weight:700;margin-top:2px}
-.herst{margin-top:6px;font-size:13px;color:#ffd6a5}
-.herst b{font-size:15px}
-.gcal{color:var(--accent);text-decoration:none;border:1px solid rgba(245,169,198,.4);border-radius:999px;padding:6px 12px;font-size:13px}
-.gtools{display:flex;gap:16px;justify-content:center;margin:6px 0}
-.linkbtn{background:none;border:0;color:var(--gold);font-size:14px;cursor:pointer;padding:6px}
-.group-title{font-size:13px;color:var(--muted);margin:18px 2px 8px;letter-spacing:1px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:10px}
-.card.pinned{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
-.chead{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.dest{font-size:17px;font-weight:700}
-.dest .code{font-size:12px;color:var(--muted);font-weight:500;margin-left:6px}
-.tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--gold-soft);color:var(--gold);white-space:nowrap}
-.pin{background:none;border:0;font-size:20px;cursor:pointer;color:var(--muted);padding:0 2px}
-.pin.on{color:var(--gold)}
-.leg{display:grid;grid-template-columns:70px 1fr auto;gap:8px;align-items:center;padding:10px 0 2px}
-.leg+.leg{border-top:1px dashed var(--line);margin-top:8px}
-.dir{font-size:11px;color:var(--muted)}
-.fno{font-weight:700;font-size:15px;color:var(--accent)}
-.times{font-size:15px;font-variant-numeric:tabular-nums}
-.times .arrow{color:var(--muted);margin:0 4px}
-.times .d{font-size:11px;color:var(--gold);margin-left:2px}
-.sub{font-size:12px;color:var(--muted);margin-top:2px}
-.badge{font-size:11px;padding:3px 8px;border-radius:999px;white-space:nowrap;text-align:center}
-.b-ok{background:var(--ok-bg);color:var(--ok)} .b-warn{background:var(--warn-bg);color:var(--warn)}
-.b-bad{background:var(--bad-bg);color:var(--bad)} .b-info{background:var(--info-bg);color:var(--info)}
-.b-none{color:var(--muted);border:1px solid var(--line)}
-.term{font-size:12px;margin-top:4px;color:var(--ink);display:flex;flex-wrap:wrap;column-gap:12px}
+.grp>summary::after{content:'›';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:24px;transition:transform .15s}
+.grp[open]>summary::after{transform:translateY(-50%) rotate(90deg)}
+.grp .gic{border:var(--line);border-radius:20px;overflow:hidden;flex:0 0 auto;display:block;line-height:0}
+.grp .gtx{min-width:0}
+.grp .gname{font-size:21px}
+.grp .gsub{font-size:13px;color:var(--muted);margin-left:6px}
+.grp .gcount{margin-left:6px;vertical-align:3px}
+.grp .gdest{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.grp .gbody{padding:0 12px 12px}
+.grp.country{border-radius:18px;margin:10px 0 0}
+.grp.country>summary{padding:8px 36px 8px 10px;gap:10px}
+.grp.country .gic{border:var(--line2);border-radius:14px}
+.grp.country .gname{font-size:17px}
+.grp.country .gbody{padding:0 8px 8px}
+.grp.off>summary{padding-left:16px}
+.gtools{display:flex;gap:10px;justify-content:center;margin:4px 0 16px}
+
+/* 航班卡 */
+.flight{border:var(--line);border-radius:20px;overflow:hidden;margin-top:10px;background:var(--paper)}
+.flight.pinned{box-shadow:0 0 0 3px var(--gold)}
+.flight.hercard{box-shadow:0 0 0 3px var(--copper)}
+.flight .banner{display:block;width:100%;height:auto;aspect-ratio:340/120;border-bottom:var(--line)}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px 2px 14px}
+.dest{font-size:20px}
+.dest .code{font-size:12px;color:var(--muted);margin-left:4px}
+.tag{font-size:11px;padding:3px 9px;border:var(--line2);border-radius:999px;background:var(--gold-s);white-space:nowrap}
+.tag.long{background:var(--mizu)} .tag.unsure{background:var(--yellow)}
+.pin{background:none;border:0;font-size:22px;cursor:pointer;color:var(--muted);padding:0 2px;line-height:1}
+.pin.on{color:var(--copper)}
+.leg{display:grid;grid-template-columns:66px minmax(0,1fr);gap:6px;align-items:start;padding:10px 10px 10px 14px}
+.leg .bdg{margin-top:5px}
+.leg+.leg{border-top:2.5px dashed rgba(64,75,78,.3)}
+.dir{font-size:10px;color:var(--muted);white-space:nowrap}
+.fno{font-family:"Michroma",sans-serif;font-size:11px;color:var(--copper)}
+.times{font-family:"Michroma",sans-serif;font-size:11.5px;white-space:nowrap;letter-spacing:-.2px}
+.times .arrow{color:var(--muted);margin:0 3px}
+.times .d{font-family:"Huninn",sans-serif;font-size:10px;color:var(--copper);margin-left:2px}
+.sub{font-size:12px;color:var(--muted);margin-top:3px}
+.badge{font-size:11px;padding:3px 8px;border:var(--line2);border-radius:999px;white-space:nowrap;text-align:center;display:inline-block}
+.b-ok{background:var(--green)} .b-warn{background:var(--yellow)} .b-bad{background:var(--coral)} .b-info{background:var(--mizu)} .b-none{background:var(--paper)}
+.term{font-size:12px;margin-top:3px;display:flex;flex-wrap:wrap;column-gap:10px}
 .term .ti{white-space:nowrap}
-.term b{color:var(--gold)}
-.term .tsrc{font-size:10px;color:var(--muted);margin-left:3px}
+.term b{font-weight:400;color:var(--copper)}
+.term .tsrc{font-size:10px;color:var(--muted);margin-left:2px}
 .term .tna{color:var(--muted)}
-.empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:14px;line-height:1.7}
-.setup{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:16px;line-height:1.7;font-size:14px}
-.setup h2{margin:0 0 6px;font-size:17px}
+.ffoot{border-top:var(--line);padding:10px 14px 12px}
+.why{font-size:11px;color:var(--muted)}
+.altline{font-size:12px;color:var(--muted);margin-bottom:6px}
+.herbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.herlbl{color:var(--copper);font-size:14px;margin-right:2px}
+.hbtn{border:var(--line2);background:var(--paper);border-radius:999px;padding:4px 11px;font-size:12px;cursor:pointer}
+.hbtn.main{background:var(--copper);color:var(--paper);font-size:13px;padding:5px 13px}
+.hbtn.on{background:var(--copper);color:var(--paper)}
+.hbtn.ghost{color:var(--muted)}
+.seg{display:inline-flex;gap:4px}
+.vlinks{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12px}
+.vrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.vl-l{color:var(--muted)}
+.vl-n{min-width:58px;font-family:"Michroma",sans-serif;font-size:10.5px}
+.vlinks a,.gcal{color:var(--ink);text-decoration:none;border:var(--line2);border-radius:999px;padding:3px 10px;background:var(--paper);font-size:12px}
+
+/* 其他 */
+.rawtbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+.rawtbl td,.rawtbl th{border-bottom:2px dashed rgba(64,75,78,.25);padding:6px 4px;text-align:left;vertical-align:top}
+.rawtbl th{color:var(--muted);font-weight:400}
+.rawh{margin-top:14px;font-size:16px}
+.offday{font-size:13px;line-height:1.8;margin:0;padding-left:20px}
+.empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px;line-height:1.7}
+.setup{border:var(--line);border-radius:var(--r);padding:16px;margin-bottom:16px;line-height:1.7;font-size:14px;background:var(--gold-s)}
+.setup h2{margin:0 0 6px;font-size:18px;font-weight:400}
 .setup ol{padding-left:20px;margin:6px 0}
-label.f{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
-input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
-.btn{display:inline-block;border:0;background:var(--accent);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:15px;cursor:pointer;margin-top:12px}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-.ovlist{margin-top:8px;border:1px solid var(--line);border-radius:12px;max-height:240px;overflow:auto}
-.ovrow{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-top:1px solid var(--line);font-size:14px}
+label.f{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 14px;border-radius:14px;border:var(--line);background:var(--paper);color:var(--ink);font-size:15px;font-family:inherit}
+input[type=checkbox]{accent-color:var(--copper);width:18px;height:18px;vertical-align:-4px}
+.btn{display:inline-block;border:var(--line);background:var(--copper);color:var(--paper);padding:8px 16px;border-radius:999px;font-size:15px;cursor:pointer;margin-top:12px}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.ovlist{margin-top:8px;border:var(--line);border-radius:16px;max-height:240px;overflow:auto}
+.ovrow{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-top:2px dashed rgba(64,75,78,.25);font-size:14px}
 .ovrow:first-child{border-top:0}
-.ovrow select{font-size:14px;padding:4px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-.tag.long{background:var(--info-bg);color:var(--info)} .tag.unsure{background:var(--warn-bg);color:var(--warn)}
-.why{font-size:11px;color:var(--muted);margin-top:4px}
-.altline{font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.chips label{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;display:flex;align-items:center;gap:4px}
-dialog{border:0;border-radius:18px;padding:0;background:var(--card);color:var(--ink);width:min(520px,calc(100vw - 24px));max-height:88vh}
-dialog::backdrop{background:rgba(0,0,0,.45)}
+.ovrow select{font-size:14px;padding:4px 6px;border-radius:10px;border:var(--line2);background:var(--paper);color:var(--ink);font-family:inherit}
+dialog{border:var(--line);border-radius:24px;padding:0;background:var(--paper);color:var(--ink);width:min(520px,calc(100vw - 24px));max-height:88vh}
+dialog::backdrop{background:rgba(64,75,78,.45)}
 .dlg{padding:18px;overflow:auto;max-height:88vh}
-.dlg h2{margin:0 0 4px;font-size:18px}
+.dlg h2{margin:0 0 4px;font-size:20px;font-weight:400}
+.dlg .search{margin:12px 0 4px}
 .note{font-size:12px;color:var(--muted);line-height:1.6}
-.err{background:var(--bad-bg);color:var(--bad);border-radius:12px;padding:10px 12px;font-size:13px;margin-top:12px;line-height:1.6;word-break:break-word}
+.err{background:var(--coral);border:var(--line);border-radius:16px;padding:10px 12px;font-size:13px;margin-bottom:14px;line-height:1.6;word-break:break-word;white-space:pre-line}
+.foot{text-align:center;font-size:11px;color:var(--muted);margin:6px 0;line-height:1.6}
+.foot img{height:18px;opacity:.85}
 </style>
 </head>
 <body>
-<section class="hero" aria-label="YOKA & Sophie">
-  <div class="hero-card">
-    <img src="couple.jpg" alt="YOKA 與 Sophie 的插畫" width="900" height="1198">
-    <div class="hearts" aria-hidden="true"><span>♥</span><span>♥</span><span>♥</span><span>♥</span></div>
-    <div class="hero-text">
-      <div class="hero-names">YOKA<span class="amp">&amp;</span>Sophie ❤️</div>
-      <div class="hero-wish">✈︎ 上班順飛 ✈︎</div>
+<div id="artSprite"></div>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <img class="bm" src="starlux-mark.png" alt="">
+      <div><div class="bt">老大航班</div><img class="bw" src="starlux-word.png" alt="STARLUX"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="iconbtn" id="refreshBtn" title="重新整理" aria-label="重新整理">↻</button>
+      <button class="iconbtn gs" id="settingsBtn" title="設定" aria-label="設定">⚙</button>
     </div>
   </div>
-</section>
-<header>
-  <div class="wrap">
-    <div class="top">
-      <h1>JX-老大航班查詢<small id="dateLabel">—</small></h1>
-      <div style="display:flex;gap:6px">
-        <button class="icon-btn" id="refreshBtn" title="重新整理" aria-label="重新整理">↻</button>
-        <button class="icon-btn" id="settingsBtn" title="設定" aria-label="設定">⚙</button>
-      </div>
+  <div class="card hero">
+    <img class="crew" src="crew.jpg" alt="星宇空服員插畫" width="900" height="1200">
+    <div class="band">
+      <div class="who"><img class="ava" src="couple.jpg" alt="YOKA 與 Sophie"><div class="names">YOKA <span class="h">&amp;</span> Sophie <span class="h">♥</span></div></div>
+      <span class="pill copper">✦ 上班順飛</span>
     </div>
-    <div class="tabs" id="dayTabs"></div>
-    <div class="status-line" id="statusLine"></div>
   </div>
-</header>
+</div>
 
-<main class="wrap" id="main"></main>
+<main class="wrap" id="main">
+  <div id="herBox"></div>
+  <div class="daybar">
+    <div class="tabs" id="dayTabs"></div>
+    <div class="status-line"><span id="dateLabel"></span>　<span id="statusLine"></span></div>
+  </div>
+  <div id="list"></div>
+</main>
 
 <dialog id="settingsDlg">
   <form class="dlg" method="dialog" id="settingsForm">
@@ -257,6 +300,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </div>
 </dialog>
 
+<script src="art.js"></script>
 <script>
 (() => {
 'use strict';
@@ -266,6 +310,9 @@ const API = 'https://airlabs.co/api/v9/';
 const HOME = 'TPE';
 const TPE_TZ = 'Asia/Taipei';
 const ROUTE_TTL = 7 * 24 * 3600e3;
+const ART = window.LaodaArt;
+document.getElementById('artSprite').innerHTML = ART.sprite();
+const WEEK_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 const LIVE_TTL = 10 * 60e3;
 
 // 航點中文名稱與時區（僅作顯示與時間換算；未列出的航點會顯示 IATA 代碼並改用 API 的 UTC 時間）
@@ -569,11 +616,11 @@ function renderTabs(){
   for (let i = 0; i < 7; i++){
     const d = new Date(Date.UTC(tp.y,tp.m-1,tp.d) + i*86400e3);
     const lbl = i===0 ? '今天' : i===1 ? '明天' : (d.getUTCMonth()+1)+'/'+d.getUTCDate();
-    html += `<button class="${i===dayOffset?'on':''}" data-d="${i}">${lbl}（${WEEK_ZH[d.getUTCDay()]}）</button>`;
+    html += `<button class="pill ${i===dayOffset?'on':''}" data-d="${i}">${lbl}（${WEEK_ZH[d.getUTCDay()]}）</button>`;
   }
   $('dayTabs').innerHTML = html;
   const d0 = new Date(Date.UTC(tp.y,tp.m-1,tp.d) + dayOffset*86400e3);
-  $('dateLabel').textContent = `台北出發 ${d0.getUTCFullYear()}/${d0.getUTCMonth()+1}/${d0.getUTCDate()}（${WEEK_ZH[d0.getUTCDay()]}）・時間皆為當地時間`;
+  $('dateLabel').textContent = `台北出發 ${d0.getUTCMonth()+1}/${d0.getUTCDate()}（${WEEK_ZH[d0.getUTCDay()]}）・時間為當地時間`;
 }
 
 function legHtml(kind, r, depMs, arrMs, base, label){
@@ -584,14 +631,13 @@ function legHtml(kind, r, depMs, arrMs, base, label){
   const s = liveFor(r, depMs);
   const daysNote = (!Array.isArray(r.days) || !r.days.length) ? '・API 未提供營運日' : '';
   return `<div class="leg">
-    <div><div class="dir">${label || (kind==='out'?'去程':'回程')}</div><div class="fno">${esc(fno(r))}</div></div>
+    <div><div class="dir">${label || (kind==='out'?'去程':'回程')}</div><div class="fno">${esc(fno(r))}</div><div class="bdg">${badge(s)}</div></div>
     <div>
       <div class="times">${esc(from)} ${fmt(dp)}${dlab?`<span class="d">${dlab}</span>`:''}<span class="arrow">→</span>${esc(to)} ${ap?fmt(ap):'--:--'}${alab?`<span class="d">${alab}</span>`:''}</div>
       <div class="sub">${esc(nameOf(from))} → ${esc(nameOf(to))}${r.aircraft_icao?'・'+esc(r.aircraft_icao):''}${daysNote}</div>
       ${terminalHtml(r, s)}
       ${liveDetail(s, kind==='out'?'dep':'arr')}
     </div>
-    <div>${badge(s)}</div>
   </div>`;
 }
 
@@ -603,11 +649,12 @@ function verifyLinks(x){
   const nums = [fno(x.r), x.ret && fno(x.ret.r), x.alt && fno(x.alt.r)].filter((v,i,a) => v && a.indexOf(v) === i);
   // FlightAware 使用 ICAO 代碼：星宇 JX → SJX（例：JX2 → SJX2）
   const fa = f => 'https://zh-tw.flightaware.com/live/flight/' + encodeURIComponent(f.replace(/^JX/i, 'SJX'));
-  return `<div class="vlinks"><div class="vrow"><span class="vl-l">查證：</span><a href="${gf}" target="_blank" rel="noopener">Google 航班（${esc(x.dest)}）</a></div>` +
+  return `<div class="vlinks"><div class="vrow"><span class="vl-l">查證</span><a href="${gf}" target="_blank" rel="noopener">Google 航班（${esc(x.dest)}）</a></div>` +
     nums.map(n => `<div class="vrow"><span class="vl-n">${esc(n)}</span><a href="${fa(n)}" target="_blank" rel="noopener">FlightAware</a><a href="${st(n)}" target="_blank" rel="noopener">Google 狀態</a></div>`).join('') + '</div>';
 }
 /* ---------- Sophie 的航班 ---------- */
 const HER = 'Sophie';
+const FOOT = `<p class="foot" style="margin-top:14px"><img src="starlux-logo.png" alt="STARLUX"></p><p class="foot lat" style="font-size:9px;letter-spacing:2px">UNOFFICIAL · PERSONAL USE</p><p class="foot">非官方・個人使用。星宇航空名稱與商標屬其所有者。</p>`;
 const dateKeyOf = b => b.y+'-'+pad(b.m)+'-'+pad(b.d);
 function offsetOfKey(k){ const [y,m,d] = k.split('-').map(Number); const tp = partsIn(TPE_TZ, Date.now()); return Math.round((Date.UTC(y,m-1,d) - Date.UTC(tp.y,tp.m-1,tp.d))/86400e3); }
 function herTrip(k){
@@ -620,10 +667,10 @@ function herTrip(k){
 function herControls(x){
   const k = dateKeyOf(x.base), h = settings.her[k];
   const mine = h && h.f === fno(x.r) && h.dest === x.dest;
-  if (!mine) return `<div class="herbar"><button type="button" class="hbtn main" data-hset="${esc(k+'|'+fno(x.r)+'|'+x.dest+'|'+(x.cls==='long'?'night':'turn'))}">💗 ${HER} 飛這班</button>${h ? `<span class="note">（這天已標記 ${esc(h.f)}，按下會改成這班）</span>` : ''}</div>`;
+  if (!mine) return `<div class="herbar"><button type="button" class="hbtn main" data-hset="${esc(k+'|'+fno(x.r)+'|'+x.dest+'|'+(x.cls==='long'?'night':'turn'))}">♥ ${HER} 飛這班</button>${h ? `<span class="note">（這天已標記 ${esc(h.f)}，按下會改成這班）</span>` : ''}</div>`;
   const both = x.turn && x.night && !(x.turn.r === x.night.r && x.turn.depMs === x.night.depMs);
   const modes = both ? `<span class="seg"><button type="button" class="hbtn ${h.mode!=='night'?'on':''}" data-hmode="${k}|turn">當天回</button><button type="button" class="hbtn ${h.mode==='night'?'on':''}" data-hmode="${k}|night">過夜</button></span>` : '';
-  return `<div class="herbar on"><span class="herlbl">💗 ${HER} 飛這班</span>${modes}<button type="button" class="hbtn" data-hcal="${k}">📅 加入行事曆</button><button type="button" class="hbtn ghost" data-hclear="${k}">取消</button></div>`;
+  return `<div class="herbar on"><span class="herlbl">♥ ${HER} 飛這班</span>${modes}<button type="button" class="hbtn" data-hcal="${k}">加入行事曆</button><button type="button" class="hbtn ghost" data-hclear="${k}">取消</button></div>`;
 }
 function herStatus(t){
   const now = Date.now(), x = t.x, r = t.ret, place = nameOf(x.dest);
@@ -631,8 +678,13 @@ function herStatus(t){
   if (x.arrMs && now < x.arrMs) return [`飛往${place}中，抵達`, x.arrMs];
   if (r && now < r.depMs) return [`在${place}，回程起飛`, r.depMs];
   if (r && r.arrMs && now < r.arrMs) return ['回程飛行中，落地', r.arrMs];
-  return ['已回到台北 💗', null];
+  return ['已回到台北 ♥', null];
 }
+function bigCount(ms){
+  const a = Math.max(0, ms - Date.now()), h = Math.floor(a/3600e3), m = Math.floor(a%3600e3/60e3);
+  return (h ? `${h}<span> 小時 </span>` : '') + `${m}<span> 分</span>`;
+}
+const PIN_SVG = `<svg class="spin" width="96" height="34" viewBox="0 0 96 34" aria-hidden="true"><g stroke="#404B4E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M14 20 H84 a8 8 0 0 0 0 -16 H24"/><path d="M14 26 H80"/></g><rect x="4" y="14" width="16" height="16" rx="4" fill="#C3CBCD" stroke="#404B4E" stroke-width="3"/></svg>`;
 function herNotice(){
   const keys = Object.keys(settings.her).sort();
   const now = Date.now();
@@ -642,26 +694,48 @@ function herNotice(){
     const t = herTrip(k); if (!t) continue;
     const [y,m,d] = k.split('-').map(Number), wd = new Date(Date.UTC(y,m-1,d)).getUTCDay();
     const dl = `${m}/${d}（${WEEK_ZH[wd]}）`;
-    if (t.missing){ out += `<div class="herrow"><div class="lbl">💗 ${dl}</div><div class="big">${esc(t.h.f)} → ${esc(nameOf(t.h.dest))}</div><div class="note">班表裡找不到這班（可能停飛或班表已變更）</div></div>`; continue; }
+    if (t.missing){
+      out += `<div class="sf-empty">♥ ${dl} 標記的 <span class="lat">${esc(t.h.f)}</span> → ${esc(nameOf(t.h.dest))}：班表裡找不到這班（可能停飛或班表已變更）。<button type="button" class="hbtn ghost" data-hclear="${k}">移除</button></div>`;
+      continue;
+    }
     if (t.ret && t.ret.arrMs && t.ret.arrMs < now - 3*3600e3) continue;   // 已回來超過 3 小時就不顯示
     if (!t.ret && t.x.depMs < now - 24*3600e3) continue;
-    const dp = partsIn(TPE_TZ, t.x.depMs);
-    const rp = t.ret && t.ret.arrMs ? partsIn(TPE_TZ, t.ret.arrMs) : null;
-    const term = t.ret ? terminalOf(t.ret.r, liveFor(t.ret.r, t.ret.depMs), 'arr') : null;
+    const x = t.x, r = t.ret, country = REGION(x.dest);
+    const dp = partsIn(TPE_TZ, x.depMs);
+    const rp = r && r.arrMs ? partsIn(TPE_TZ, r.arrMs) : null;
+    const depT = terminalOf(x.r, liveFor(x.r, x.depMs), 'dep');
+    const arrT = r ? terminalOf(r.r, liveFor(r.r, r.depMs), 'arr') : null;
+    const night = x.cls === 'long' || t.h.mode === 'night';
     const [st, ms] = herStatus(t);
-    out += `<div class="herrow" ${off>=0&&off<=6?`data-d="${off}"`:''}>
-      <div class="lbl">💗 ${HER}・${dl}${t.x.cls==='long'||t.h.mode==='night'?'・過夜':''}</div>
-      <div class="big">${esc(fno(t.x.r))} ${fmt(dp)} 台北 → ${esc(nameOf(t.x.dest))}</div>
-      <div class="sub">${t.ret ? `回程 ${esc(fno(t.ret.r))}，${rp ? fmt(rp)+' '+(dayDiffLabel(rp, t.x.base)||'當天') : '時間不明'} 抵台・落地航廈 ${term ? esc(termLabel(term.t)) : '未提供'}` : '找不到回程班機'}</div>
-      <div class="herst">${st}${ms ? '：<b>'+countdown(ms)+'</b>' : ''}</div>
+    const fa = f => 'https://zh-tw.flightaware.com/live/flight/' + encodeURIComponent(f.replace(/^JX/i, 'SJX'));
+    out += `<div class="sf">
+      <div class="ticket">
+        <span class="notch l"></span><span class="notch r"></span>
+        <div class="tk-top"><span class="tk-name"><img src="starlux-mark.png" alt="">BOARDING NOTE</span><span>${m}/${d} (${WEEK_EN[wd]})</span></div>
+        <div class="tk-route">
+          <div><div class="tk-code">TPE</div><div class="tk-city">台北桃園</div></div>
+          <div class="tk-mid"><svg width="34" height="22" viewBox="0 0 64 40"><use href="#plane"/></svg></div>
+          <div style="text-align:right"><div class="tk-code">${esc(x.dest)}</div><div class="tk-city">${esc(nameOf(x.dest))}</div></div>
+        </div>
+      </div>
+      ${PIN_SVG}
+      <div class="env">
+        <svg class="flap" viewBox="0 0 358 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 2 L179 54 L358 2" fill="none" stroke="#404B4E" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+        <div class="stamp">${ART.stampSvg(x.dest, country, 46)}</div>
+        <div class="kv"><span class="k">去程</span><b>${esc(fno(x.r))}</b><span>${fmt(dp)} 起飛${depT ? '・'+esc(termLabel(depT.t)) : ''}</span></div>
+        <div class="kv"><span class="k">回程</span>${r ? `<b>${esc(fno(r.r))}</b><span>${rp ? fmt(rp) : '--:--'} 抵台${rp && dayDiffLabel(rp, x.base) ? `<span class="d"> ${dayDiffLabel(rp, x.base)}</span>` : ''}</span><span class="tm-term">落地 ${arrT ? esc(termLabel(arrT.t)) : '未提供'}</span>` : '<span>找不到回程班機</span>'}</div>
+        <div class="count"><div><div class="lab muted">${st}</div><div class="big ${ms ? '' : 'done'}">${ms ? bigCount(ms) : '♥'}</div></div><div style="text-align:right" class="lab">${night ? '過夜，隔天回來' : '當天回來'}<br>記得去接她 <span style="color:#E07F72">♥</span></div></div>
+        <div class="row"><button type="button" class="pill copper" data-hcal="${k}">加入行事曆</button><a class="pill" href="${fa(fno(x.r))}" target="_blank" rel="noopener">FlightAware</a>${off>=0&&off<=6&&off!==dayOffset ? `<button type="button" class="pill gs" data-d="${off}">看這天航班</button>` : ''}<button type="button" class="pill" data-hclear="${k}">取消標記</button></div>
+      </div>
     </div>`;
   }
-  return out ? `<div class="notice her"><h2>${HER} 的航班</h2>${out}</div>` : '';
+  const head = `<div class="sf-title"><span class="hand">Sophie's flight</span><span class="q">今天飛哪裡呢？</span></div>`;
+  return head + (out || `<div class="sf-empty">在下方航班卡按「♥ Sophie 飛這班」，她的登機票就會夾在這裡，還有起飛／落地倒數。</div>`);
 }
 
 /* ---------- 行事曆 ---------- */
 const icsTime = ms => new Date(ms).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-const icsEsc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+const icsEsc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
 function icsFold(line){ const out = []; let cur = ''; for (const ch of line){ if (new TextEncoder().encode(cur+ch).length > 73){ out.push(cur); cur = ' '+ch; } else cur += ch; } out.push(cur); return out.join('\r\n'); }
 function herEvents(t){
   const x = t.x, r = t.ret, place = nameOf(x.dest), ev = [];
@@ -692,7 +766,7 @@ function openCalDialog(k){
   if (!t || t.missing){ alert('找不到這班的資料'); return; }
   const evs = herEvents(t);
   $('calBody').innerHTML = `<p class="note">會建立 ${evs.length} 個事件：去程、回程${evs.some(e=>e.id==='land')?`，以及「落地」事件（落地前 ${settings.remindMin} 分鐘提醒）`:''}。時間是表定時間，延誤不會自動更新。</p>
-    <button type="button" class="btn" id="icsBtn">📅 加入 iPhone 行事曆</button>
+    <button type="button" class="btn" id="icsBtn">加入 iPhone 行事曆</button>
     <p class="note" style="margin-top:14px">或用 Google 日曆（一次一個事件，提醒用 Google 日曆預設值）：</p>
     <div class="vrow">${evs.map(e => `<a class="gcal" href="${gcalUrl(e)}" target="_blank" rel="noopener">${e.id==='out'?'去程':e.id==='ret'?'回程':'落地'}</a>`).join('')}</div>`;
   $('icsBtn').onclick = () => {
@@ -718,8 +792,9 @@ function altLine(x){
 }
 function render(){
   renderTabs();
-  const main = $('main');
+  const main = $('list');
   if (!settings.apiKey){
+    $('herBox').innerHTML = '';
     main.innerHTML = `<div class="setup">
       <h2>第一次使用：設定 API Key</h2>
       <ol>
@@ -729,12 +804,13 @@ function render(){
       </ol>
       <div class="note">班表資料全部來自 AirLabs API，本 App 不內建任何班號或時間，避免顯示過期或錯誤資訊。</div>
       <button class="btn" id="openSettings2">開啟設定</button>
-    </div>`;
+    </div>${FOOT}`;
     $('openSettings2').onclick = openSettings;
     $('statusLine').textContent = '';
     return;
   }
   if (!routes){
+    $('herBox').innerHTML = '';
     main.innerHTML = lastError ? `<div class="err">${esc(lastError)}</div>` : '<div class="empty">讀取班表中…</div>';
     return;
   }
@@ -748,8 +824,9 @@ function render(){
   const nextDep = board.filter(x => x.depMs > now).sort((a,b)=>a.depMs-b.depMs)[0];
   const nextArr = board.filter(x => x.ret && x.ret.arrMs && x.ret.arrMs > now).sort((a,b)=>a.ret.arrMs-b.ret.arrMs)[0];
   const pinnedRows = board.filter(x => pinned.has(x.dest));
-  let notice = '<div class="notice"><h2>通知</h2>';
-  const nrow = (lbl, big, ms) => `<div class="nrow"><div><div class="lbl">${lbl}</div><div class="big">${big}</div></div><div class="cd">${ms?countdown(ms):''}</div></div>`;
+  let notice = '<div class="card notice"><div class="nh"><span class="st">✦</span> 通知</div>';
+  let nIdx = 0;
+  const nrow = (lbl, big, ms) => `<div class="nrow"><div><div class="lbl">${lbl}</div><div class="big">${big}</div></div>${ms ? `<span class="pill sm ${(nIdx++ % 2) ? 'gs' : 'cs'}">${countdown(ms)}</span>` : ''}</div>`;
   if (nextDep){ const p = partsIn(TPE_TZ, nextDep.depMs); notice += nrow('下一班從台北出發', `${esc(fno(nextDep.r))} ${fmt(p)} → ${esc(nameOf(nextDep.dest))}`, nextDep.depMs); }
   const arrTermTxt = x => { const t = terminalOf(x.ret.r, liveFor(x.ret.r, x.ret.depMs), 'arr'); return t ? `・落地航廈 ${esc(termLabel(t.t))}` : '・落地航廈未提供'; };
   if (nextArr){ const p = partsIn(TPE_TZ, nextArr.ret.arrMs); notice += nrow('下一班回到台北（台北時間）', `${esc(fno(nextArr.ret.r))} ${fmt(p)} ${dayDiffLabel(p, nextArr.base)} ← ${esc(nameOf(nextArr.dest))}<div class="lbl">${arrTermTxt(nextArr)}</div>`, nextArr.ret.arrMs); }
@@ -758,18 +835,20 @@ function render(){
     const rp = x.ret && x.ret.arrMs ? partsIn(TPE_TZ, x.ret.arrMs) : null;
     notice += nrow(`★ ${esc(nameOf(x.dest))}`, `${esc(fno(x.r))} ${fmt(p)} 出發・${x.ret?esc(fno(x.ret.r))+' '+(rp?fmt(rp)+' '+dayDiffLabel(rp, x.base):'')+' 回台'+arrTermTxt(x):'無回程資料'}`, null);
   }
-  if (!nextDep && !nextArr && !pinnedRows.length) notice += '<div class="note">這一天沒有尚未出發的航班。</div>';
+  if (!nextDep && !nextArr && !pinnedRows.length) notice += '<div class="empty-n">這一天沒有尚未出發的航班。</div>';
   notice += '</div>';
 
-  let html = herNotice() + notice + `<input class="search" id="search" type="search" placeholder="搜尋航點、班號（例：東京、JX800）" value="${esc(query)}">`;
+  $('herBox').innerHTML = herNotice();
+  let html = notice + `<input class="search" id="search" type="search" placeholder="搜尋航點、班號（例：東京、JX800）" value="${esc(query)}">`;
   if (lastError) html += `<div class="err">${esc(lastError)}</div>`;
   if (!list.length){
     html += `<div class="empty">${board.length ? '找不到符合的航班' : '這一天 API 沒有回傳從台北出發的星宇航班。<br>若持續如此，請到設定「清除班表快取並重抓」。'}</div>`;
   } else {
     const isHer = x => { const h = settings.her[dateKeyOf(x.base)]; return h && h.f === fno(x.r) && h.dest === x.dest; };
-    const cardHtml = x => `<div class="card ${pinned.has(x.dest)?'pinned':''} ${isHer(x)?'hercard':''}">
+    const cardHtml = x => `<div class="flight ${pinned.has(x.dest)?'pinned':''} ${isHer(x)?'hercard':''}">
+          ${ART.bannerSvg(x.dest, REGION(x.dest))}
           <div class="chead">
-            <div class="dest">${esc(nameOf(x.dest))}${nameOf(x.dest)!==x.dest?`<span class="code">${esc(x.dest)}</span>`:''}</div>
+            <div class="dest">${esc(nameOf(x.dest))}${nameOf(x.dest)!==x.dest?`<span class="code lat">${esc(x.dest)}</span>`:''}</div>
             <div style="display:flex;gap:6px;align-items:center">
               ${tagHtml(x)}
               <button class="pin ${pinned.has(x.dest)?'on':''}" data-pin="${esc(x.dest)}" aria-label="釘選">${pinned.has(x.dest)?'★':'☆'}</button>
@@ -778,10 +857,12 @@ function render(){
           ${legHtml('out', x.r, x.depMs, x.arrMs, x.base)}
           ${x.ret ? legHtml('back', x.ret.r, x.ret.depMs, x.ret.arrMs, x.base, x.cls==='long'?'回程（過夜）':'回程（當天）') : '<div class="sub" style="padding-top:8px">找不到符合條件的回程班機（可在設定調整時數）</div>'}
           ${x.alt && x.cls==='unsure' ? legHtml('back', x.alt.r, x.alt.depMs, x.alt.arrMs, x.base, '回程（若過夜）') : ''}
-          ${x.alt && x.cls==='short' ? altLine(x) : ''}
-          <div class="why">判斷依據：${esc(x.reason)}</div>
-          ${herControls(x)}
-          ${verifyLinks(x)}
+          <div class="ffoot">
+            ${x.alt && x.cls==='short' ? altLine(x) : ''}
+            <div class="why">判斷依據：${esc(x.reason)}</div>
+            ${herControls(x)}
+            ${verifyLinks(x)}
+          </div>
         </div>`;
     const searching = !!q;
     const isOpen = k => searching || openKeys.has(k);
@@ -789,7 +870,7 @@ function render(){
     // 釘選：固定展開在最上方
     const pinRows = list.filter(x => pinned.has(x.dest));
     if (pinRows.length){
-      html += '<div class="group-title">★ 釘選</div>' + pinRows.map(cardHtml).join('');
+      html += '<div class="group-title">★ 釘選</div>' + pinRows.map(cardHtml).join('') + '<div style="height:14px"></div>';
     }
     // 洲 → 國家 → 航班，預設收合
     const tree = {};
@@ -806,8 +887,8 @@ function render(){
       const ck = 'c:'+cont;
       const single = countries.length === 1;
       html += `<details class="grp cont" data-key="${esc(ck)}" ${isOpen(ck)?'open':''}>
-        <summary><span class="gname">${esc(cont)}${single && countries[0] !== cont ? `<span class="gsub">　${esc(countries[0])}</span>` : ''}</span><span class="gcount">${all.length} 班</span>
-        <div class="gdest">${esc(single ? destNames(all) : countries.join('、'))}</div></summary>
+        <summary><span class="gic">${ART.contIcon(cont, 62)}</span><span class="gtx"><span class="gname">${esc(cont)}</span>${single && countries[0] !== cont ? `<span class="gsub">${esc(countries[0])}</span>` : ''}<span class="pill sm gold gcount">${all.length} 班</span>
+        <div class="gdest">${esc(single ? destNames(all) : countries.join('、'))}</div></span></summary>
         <div class="gbody">`;
       if (single){
         html += all.map(cardHtml).join('');
@@ -815,14 +896,14 @@ function render(){
         for (const c of countries){
           const rows = tree[cont][c], nk = 'n:'+c;
           html += `<details class="grp country" data-key="${esc(nk)}" ${isOpen(nk)?'open':''}>
-            <summary><span class="gname">${esc(c)}</span><span class="gcount">${rows.length} 班</span>
-            <div class="gdest">${esc(destNames(rows))}</div></summary>
+            <summary><span class="gic">${ART.countryIcon(c, 42)}</span><span class="gtx"><span class="gname">${esc(c)}</span><span class="pill sm gs gcount">${rows.length} 班</span>
+            <div class="gdest">${esc(destNames(rows))}</div></span></summary>
             <div class="gbody">${rows.map(cardHtml).join('')}</div></details>`;
         }
       }
       html += '</div></details>';
     }
-    html += `<div class="gtools"><button type="button" class="linkbtn" id="expandAll">全部展開</button><button type="button" class="linkbtn" id="collapseAll">全部收合</button></div>`;
+    html += `<div class="gtools"><button type="button" class="pill sm" id="expandAll">全部展開</button><button type="button" class="pill sm" id="collapseAll">全部收合</button></div>`;
   }
   // 這一天沒有班的航點（API 有這條航線，但營運日不含這天）
   {
@@ -832,13 +913,13 @@ function render(){
     const codes = Object.keys(off).sort((a,b)=>REGION_ORDER.indexOf(REGION(a))-REGION_ORDER.indexOf(REGION(b)) || a.localeCompare(b));
     if (codes.length){
       const ok = 'x:off';
-      html += `<details class="grp" data-key="${ok}" ${openKeys.has(ok)?'open':''}><summary><span class="gname">這天沒有班的航點</span><span class="gcount">${codes.length} 個</span>
-        <div class="gdest">${esc(codes.map(nameOf).join('、'))}</div></summary>
+      html += `<details class="grp off" data-key="${ok}" ${openKeys.has(ok)?'open':''}><summary><span class="gtx"><span class="gname" style="font-size:17px">這天沒有班的航點</span><span class="pill sm gcount">${codes.length} 個</span>
+        <div class="gdest">${esc(codes.map(nameOf).join('、'))}</div></span></summary>
         <div class="gbody"><ul class="offday">${codes.map(c => `<li><b>${esc(nameOf(c))}</b>：${off[c].map(r => `${esc(fno(r))} ${esc(daysZh(r))}`).join('；')}</li>`).join('')}</ul>
         <div class="note" style="padding:0 4px 10px">營運日來自 AirLabs，可能與星宇實際班表不同。</div></div></details>`;
     }
   }
-  html += `<p class="note" style="margin-top:16px">資料來源：AirLabs API。班表更新於 ${new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}${live?'；即時狀態更新於 '+new Date(live.fetchedAt).toLocaleTimeString('zh-TW',{timeZone:TPE_TZ,hour:'2-digit',minute:'2-digit'}):''}。即時狀態只涵蓋接近起降時間的航班，其他顯示「表定」。正式資訊請以星宇航空官網／App 為準。</p>`;
+  html += `<p class="foot" style="margin-top:16px">資料來源：AirLabs API。班表更新於 ${new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}${live?'；即時狀態更新於 '+new Date(live.fetchedAt).toLocaleTimeString('zh-TW',{timeZone:TPE_TZ,hour:'2-digit',minute:'2-digit'}):''}。即時狀態只涵蓋接近起降時間的航班，其他顯示「表定」。正式資訊請以星宇航空官網／App 為準。</p>${FOOT}`;
   main.innerHTML = html;
   if (!q) for (const d of main.querySelectorAll('details.grp')) d.addEventListener('toggle', () => {
     if (d.open) openKeys.add(d.dataset.key); else openKeys.delete(d.dataset.key);
@@ -875,7 +956,7 @@ document.addEventListener('click', e => {
   }
   const t = e.target.closest('[data-d],[data-pin]');
   if (!t) return;
-  if (t.dataset.d != null){ dayOffset = +t.dataset.d; render(); if (t.classList.contains('herrow')) window.scrollTo({top:0}); }
+  if (t.dataset.d != null){ dayOffset = +t.dataset.d; render(); if (t.closest('#herBox')) document.querySelector('.daybar').scrollIntoView({behavior:'smooth'}); }
   if (t.dataset.pin){
     const c = t.dataset.pin, i = settings.pinned.indexOf(c);
     if (i >= 0) settings.pinned.splice(i,1); else settings.pinned.push(c);
