@@ -93,8 +93,10 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .rawh{font-weight:700;margin-top:14px}
 .offday{font-size:13px;line-height:1.7}
 .offday li{margin:2px 0}
-.vlinks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px}
+.vlinks{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px}
 .vlinks .vl-l{color:var(--muted)}
+.vrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.vl-n{min-width:62px;font-weight:700;color:var(--ink)}
 .vlinks a{color:var(--accent);text-decoration:none;border:1px solid rgba(245,169,198,.4);border-radius:999px;padding:4px 10px;background:rgba(245,169,198,.08)}
 .gtools{display:flex;gap:16px;justify-content:center;margin:6px 0}
 .linkbtn{background:none;border:0;color:var(--gold);font-size:14px;cursor:pointer;padding:6px}
@@ -566,7 +568,10 @@ function verifyLinks(x){
   const gf = 'https://www.google.com/travel/flights?hl=zh-TW&q=' + encodeURIComponent(`Flights from TPE to ${x.dest} on ${date} STARLUX`);
   const st = f => 'https://www.google.com/search?hl=zh-TW&q=' + encodeURIComponent(`${f} flight status`);
   const nums = [fno(x.r), x.ret && fno(x.ret.r), x.alt && fno(x.alt.r)].filter((v,i,a) => v && a.indexOf(v) === i);
-  return `<div class="vlinks"><span class="vl-l">查證：</span><a href="${gf}" target="_blank" rel="noopener">Google 航班</a>${nums.map(n => `<a href="${st(n)}" target="_blank" rel="noopener">${esc(n)} 狀態</a>`).join('')}</div>`;
+  // FlightAware 使用 ICAO 代碼：星宇 JX → SJX（例：JX2 → SJX2）
+  const fa = f => 'https://zh-tw.flightaware.com/live/flight/' + encodeURIComponent(f.replace(/^JX/i, 'SJX'));
+  return `<div class="vlinks"><div class="vrow"><span class="vl-l">查證：</span><a href="${gf}" target="_blank" rel="noopener">Google 航班（${esc(x.dest)}）</a></div>` +
+    nums.map(n => `<div class="vrow"><span class="vl-n">${esc(n)}</span><a href="${fa(n)}" target="_blank" rel="noopener">FlightAware</a><a href="${st(n)}" target="_blank" rel="noopener">Google 狀態</a></div>`).join('') + '</div>';
 }
 function tagHtml(x){
   const m = x.manual ? '（手動）' : '（推算）';
