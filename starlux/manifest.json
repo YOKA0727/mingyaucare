@@ -1,11 +1,11 @@
 {
-  "name": "JX 班表通知中心",
-  "short_name": "JX 班表",
+  "name": "JX-老大航班查詢",
+  "short_name": "JX-老大航班查詢",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0e1424",
+  "background_color": "#ffffff",
   "theme_color": "#0e1424",
   "lang": "zh-Hant",
-  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+  "icons": [{ "src": "icon.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
 }
