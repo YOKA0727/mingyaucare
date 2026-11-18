@@ -93,6 +93,9 @@ h1 small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-
 .rawh{font-weight:700;margin-top:14px}
 .offday{font-size:13px;line-height:1.7}
 .offday li{margin:2px 0}
+.vlinks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px}
+.vlinks .vl-l{color:var(--muted)}
+.vlinks a{color:var(--accent);text-decoration:none;border:1px solid rgba(245,169,198,.4);border-radius:999px;padding:4px 10px;background:rgba(245,169,198,.08)}
 .gtools{display:flex;gap:16px;justify-content:center;margin:6px 0}
 .linkbtn{background:none;border:0;color:var(--gold);font-size:14px;cursor:pointer;padding:6px}
 .group-title{font-size:13px;color:var(--muted);margin:18px 2px 8px;letter-spacing:1px}
@@ -557,6 +560,14 @@ function legHtml(kind, r, depMs, arrMs, base, label){
   </div>`;
 }
 
+// 查證連結：開啟 Google 航班與 Google 航班狀態搜尋（App 不讀取這些網站的資料）
+function verifyLinks(x){
+  const date = x.base.y+'-'+pad(x.base.m)+'-'+pad(x.base.d);
+  const gf = 'https://www.google.com/travel/flights?hl=zh-TW&q=' + encodeURIComponent(`Flights from TPE to ${x.dest} on ${date} STARLUX`);
+  const st = f => 'https://www.google.com/search?hl=zh-TW&q=' + encodeURIComponent(`${f} flight status`);
+  const nums = [fno(x.r), x.ret && fno(x.ret.r), x.alt && fno(x.alt.r)].filter((v,i,a) => v && a.indexOf(v) === i);
+  return `<div class="vlinks"><span class="vl-l">查證：</span><a href="${gf}" target="_blank" rel="noopener">Google 航班</a>${nums.map(n => `<a href="${st(n)}" target="_blank" rel="noopener">${esc(n)} 狀態</a>`).join('')}</div>`;
+}
 function tagHtml(x){
   const m = x.manual ? '（手動）' : '（推算）';
   if (x.cls === 'long') return `<span class="tag long">過夜${m}</span>`;
@@ -630,6 +641,7 @@ function render(){
           ${x.alt && x.cls==='unsure' ? legHtml('back', x.alt.r, x.alt.depMs, x.alt.arrMs, x.base, '回程（若過夜）') : ''}
           ${x.alt && x.cls==='short' ? altLine(x) : ''}
           <div class="why">判斷依據：${esc(x.reason)}</div>
+          ${verifyLinks(x)}
         </div>`;
     const searching = !!q;
     const isOpen = k => searching || openKeys.has(k);
