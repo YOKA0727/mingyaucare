@@ -8,7 +8,7 @@
   "theme_color": "#FFFCF6",
   "lang": "zh-Hant",
   "icons": [
-    { "src": "laoda-crew-180.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "laoda-crew-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "laoda-sq-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "laoda-sq-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
