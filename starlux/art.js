@@ -298,11 +298,22 @@ function iconSvg(motif, bg, size){
   return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="${bg}"/>` +
     `<rect x="-3" y="90" width="106" height="13" fill="${GR}" stroke="${INK}" stroke-width="3"/><use href="#m-${motif}"/></svg>`;
 }
-const countryIcon = (country, size = 44) => { const [m, bg] = COUNTRY_ART[country] || COUNTRY_ART['其他']; return iconSvg(m, bg, size); };
-const contIcon = (cont, size = 62) => { const [m, bg] = CONT_ART[cont] || CONT_ART['其他']; return iconSvg(m, bg, size); };
+/* 國家插圖：使用者提供的色鉛筆風圖片（art/country-*.jpg） */
+const COUNTRY_IMG = { '台灣':'taiwan', '日本':'japan', '韓國':'korea', '港澳':'hkmo', '越南':'vietnam', '菲律賓':'philippines', '泰國':'thailand',
+  '新加坡':'singapore', '馬來西亞':'malaysia', '印尼':'indonesia', '美國':'usa', '捷克':'czech', '其他':'other' };
+const CONT_IMG = { '亞洲':'taiwan', '美洲':'usa', '歐洲':'czech', '其他':'other' };
+const imgOf = name => `art/country-${name}.jpg`;
+const imgTag = (name, size) => `<img src="${imgOf(name)}" width="${size}" height="${size}" alt="" loading="lazy" style="display:block;width:${size}px;height:${size}px">`;
+const countryIcon = (country, size = 44) => imgTag(COUNTRY_IMG[country] || 'other', size);
+const contIcon = (cont, size = 62) => imgTag(CONT_IMG[cont] || 'other', size);
+/* 城市橫幅：之後收到使用者的城市圖片，把代碼加進這裡即改用 art/banner-代碼.jpg */
+const CITY_IMG = new Set([]);
 const motifOfCity = (code, country) => CITY_MOTIF[code] || (COUNTRY_ART[country] || COUNTRY_ART['其他'])[0];
 function bannerSvg(code, country){
+  if (CITY_IMG.has(code)) return `<div class="banner bimg"><img src="art/banner-${code}.jpg" alt="" loading="lazy"></div>`;
   const b = CITY_BANNER[code];
+  // 沒有專屬橫幅的城市：用該國的色鉛筆插圖置中
+  if (!b) return `<div class="banner bimg"><img class="sq" src="${imgOf(COUNTRY_IMG[country] || 'other')}" alt="" loading="lazy"></div>`;
   const sky = (b && SKY[b]) || MZ;
   const body = b ? `<use href="#b-${b}"/>` : `<use href="#m-${motifOfCity(code, country)}" x="120" y="10" width="100" height="100"/>`;
   return `<svg class="banner" viewBox="0 0 340 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -312,7 +323,7 @@ function bannerSvg(code, country){
     <rect x="-3" y="100" width="346" height="23" fill="${GR}" stroke="${INK}" stroke-width="3"/>
     ${body}</svg>`;
 }
-function stampSvg(code, country, size = 44){ return iconSvg(motifOfCity(code, country), (COUNTRY_ART[country] || COUNTRY_ART['其他'])[1], size); }
+function stampSvg(code, country, size = 44){ return imgTag(COUNTRY_IMG[country] || 'other', size); }
 
 window.LaodaArt = { sprite, countryIcon, contIcon, bannerSvg, stampSvg, CITY_BANNER };
 })();
