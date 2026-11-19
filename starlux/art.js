@@ -311,7 +311,7 @@ const CITY_IMG = { NRT:'TYO', HND:'TYO', KIX:'OSA', CTS:'SPK', OKA:'OKA', MMY:'O
   BKK:'BKK', SIN:'SIN', KUL:'KUL', MNL:'MNL', LAX:'LAX', ONT:'LAX', SFO:'SFO', SEA:'SEA', PRG:'PRG' };
 const motifOfCity = (code, country) => CITY_MOTIF[code] || (COUNTRY_ART[country] || COUNTRY_ART['其他'])[0];
 function bannerSvg(code, country){
-  if (CITY_IMG[code]) return `<div class="banner bimg"><img src="art/banner-${CITY_IMG[code]}.jpg" alt="" loading="lazy"></div>`;
+  if (CITY_IMG[code]) return `<div class="banner bimg"><img src="art/banner-${CITY_IMG[code]}.jpg?v=2" alt="" loading="lazy"></div>`;
   const b = CITY_BANNER[code];
   // 沒有專屬橫幅的城市：用該國的色鉛筆插圖置中
   if (!b) return `<div class="banner bimg"><img class="sq" src="${imgOf(COUNTRY_IMG[country] || 'other')}" alt="" loading="lazy"></div>`;
