@@ -1,0 +1,45 @@
+# 每天從 FlightAware AeroAPI 抓星宇航空近三天的所有航班，更新 starlux/data/jx-flights.json
+# 需要先在 GitHub：Settings → Secrets and variables → Actions 新增 AEROAPI_KEY
+# 注意：排程（schedule）只會在預設分支（main）上執行
+name: JX flights (AeroAPI)
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: '最多抓幾頁（每頁 15 班，約 US$0.005）'
+        required: false
+        default: '60'
+  schedule:
+    # 每天台北時間 04:23（UTC 20:23）。要調整頻率先確認費用。
+    - cron: '23 20 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jx-flights
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Fetch JX flights
+        env:
+          AEROAPI_KEY: ${{ secrets.AEROAPI_KEY }}
+          MAX_PAGES: ${{ github.event.inputs.max_pages || '60' }}
+        run: node scripts/fetch-jx-aeroapi.mjs
+      - name: Commit data
+        run: |
+          git config user.name "jx-flights-bot"
+          git config user.email "jx-flights-bot@users.noreply.github.com"
+          git add starlux/data/jx-flights.json
+          if git diff --cached --quiet; then echo "沒有變更"; exit 0; fi
+          git commit -m "更新 JX 航班資料（AeroAPI）"
+          git push

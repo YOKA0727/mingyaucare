@@ -366,6 +366,7 @@ const saveSettings = () => store.set('settings', settings);
 let dayOffset = 0;          // 0=今天 1=明天 ...
 let routes = null;          // {out:[], back:[], fetchedAt}
 let live = null;            // {map:{key:obj}, fetchedAt}
+let aero = null;            // FlightAware AeroAPI 近三天實際航班（由 GitHub Actions 每天產生 data/jx-flights.json）
 let query = '';
 const openKeys = new Set(store.get('open', []));  // 記住哪些分組是展開的（只存在這支手機）
 let lastError = '';
@@ -386,7 +387,8 @@ function localToMs(tz, y, m, d, hh, mm){
   return ms;
 }
 const hm = s => { const t = String(s||'').match(/(\d{1,2}):(\d{2})/); return t ? [+t[1], +t[2]] : null; };
-const tzOf = code => AIRPORTS[code] ? AIRPORTS[code][1] : null;
+const EXTRA_TZ = {};
+const tzOf = code => AIRPORTS[code] ? AIRPORTS[code][1] : (EXTRA_TZ[code] || null);
 const nameOf = code => AIRPORTS[code] ? AIRPORTS[code][0] : code;
 
 // 沒有時區資料的航點：用 API 給的 dep_time 與 dep_time_utc 推算時差
@@ -509,8 +511,61 @@ async function loadLive(force){
   store.set('live', live);
 }
 
+/* ---------- FlightAware AeroAPI 資料 ---------- */
+const AERO_MAX_AGE = 48 * 3600e3;   // 資料超過 48 小時就不用（避免顯示過期航班）
+function localStr(isoStr, tz){ if (!isoStr || !tz) return null; const p = partsIn(tz, Date.parse(isoStr)); return `${p.y}-${pad(p.m)}-${pad(p.d)} ${pad(p.h)}:${pad(p.min)}`; }
+function aeroToRoute(f){
+  const depMs = Date.parse(f.sched_out), arrMs = f.sched_in ? Date.parse(f.sched_in) : null;
+  if (f.fromTz && !AIRPORTS[f.from]) EXTRA_TZ[f.from] = f.fromTz;
+  if (f.toTz && !AIRPORTS[f.to]) EXTRA_TZ[f.to] = f.toTz;
+  const dp = f.fromTz ? partsIn(f.fromTz, depMs) : null, ap = (f.toTz && arrMs) ? partsIn(f.toTz, arrMs) : null;
+  const u = ms => { const d = new Date(ms); return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes()); };
+  return { flight_iata: String(f.ident).toUpperCase(), dep_iata: f.from, arr_iata: f.to,
+    dep_time: dp ? fmt(dp) : null, dep_time_utc: u(depMs), arr_time: ap ? fmt(ap) : null, arr_time_utc: arrMs ? u(arrMs) : null,
+    duration: arrMs ? Math.round((arrMs - depMs)/60000) : null, days: dp ? [WEEK[dp.wd]] : [],
+    aircraft_icao: f.aircraft || undefined, dep_terminals: f.term_from ? [f.term_from] : null, arr_terminals: f.term_to ? [f.term_to] : null,
+    _aero: f, _depMs: depMs, _arrMs: arrMs };
+}
+async function loadAero(){
+  try {
+    const res = await fetch('data/jx-flights.json?t=' + Math.floor(Date.now()/600e3), {cache:'no-store'});
+    if (!res.ok){ aero = null; return; }
+    const j = await res.json();
+    if (!j || !Array.isArray(j.flights) || Date.now() - Date.parse(j.generatedAt) > AERO_MAX_AGE){ aero = null; return; }
+    const list = j.flights.filter(f => f.ident && f.from && f.to && f.sched_out).map(aeroToRoute);
+    const byKey = {};
+    for (const r of list){ const p = localParts(r.dep_iata, r, 'dep', r._depMs); byKey[fno(r)+'|'+p.y+'-'+pad(p.m)+'-'+pad(p.d)] = r._aero; }
+    aero = { list, byKey, generatedAt: Date.parse(j.generatedAt), ws: Date.parse(j.windowStart), we: Date.parse(j.windowEnd) };
+  } catch(e){ aero = null; }
+}
+// 某個台北日期是否整天都在 AeroAPI 資料範圍內
+function aeroCovers(base){
+  if (!aero) return false;
+  const s0 = localToMs(TPE_TZ, base.y, base.m, base.d, 0, 0);
+  return s0 >= aero.ws && s0 + 86400e3 <= aero.we;
+}
+function aeroLive(f){
+  if (!f) return null;
+  const st = f.cancelled ? 'cancelled' : f.act_in ? 'landed' : f.act_out ? 'en-route' : 'scheduled';
+  const dd = f.dep_delay > 0 ? Math.round(f.dep_delay/60) : 0;
+  return { _aero:true, status: st, dep_delayed: dd, delayed: dd,
+    dep_estimated: localStr(f.est_out, f.fromTz), dep_actual: localStr(f.act_out, f.fromTz),
+    arr_estimated: localStr(f.est_in, f.toTz), arr_actual: localStr(f.act_in, f.toTz),
+    dep_gate: f.gate_from, arr_baggage: f.baggage, dep_terminal: f.term_from, arr_terminal: f.term_to };
+}
+
 /* ---------- 配對邏輯 ---------- */
 function findReturn(dest, outR, arrMs, minGapMs, maxGapMs){
+  if (aero){
+    let bestA = null;
+    for (const b of aero.list){
+      if (b.dep_iata !== dest || b.arr_iata !== HOME) continue;
+      if (b._depMs < arrMs + minGapMs || (maxGapMs != null && b._depMs > arrMs + maxGapMs)) continue;
+      if (!bestA || b._depMs < bestA._depMs) bestA = b;
+    }
+    if (bestA) return {r:bestA, depMs:bestA._depMs, arrMs:bestA._arrMs};
+  }
+  if (!routes) return null;
   const ap = localParts(dest, outR, 'arr', arrMs);
   const cands = routes.back.filter(b => b.dep_iata === dest && b.arr_iata === HOME);
   let best = null;
@@ -530,7 +585,7 @@ function findReturn(dest, outR, arrMs, minGapMs, maxGapMs){
   return {r:best.r, depMs:best.depMs, arrMs: d != null ? best.depMs + d*60000 : null};
 }
 function buildBoard(off){
-  if (!routes) return [];
+  if (!routes && !aero) return [];
   const now = Date.now();
   const tp = partsIn(TPE_TZ, now);
   const baseMs = Date.UTC(tp.y, tp.m-1, tp.d) + (off ?? dayOffset)*86400e3;
@@ -538,11 +593,23 @@ function buildBoard(off){
   const base = {y:bd.getUTCFullYear(), m:bd.getUTCMonth()+1, d:bd.getUTCDate(), wd:bd.getUTCDay()};
 
   const rows = [];
-  for (const r of routes.out){
-    if (r.dep_iata !== HOME || !operatesOn(r, base.wd)) continue;
-    const depMs = routeDepMs(r, base.y, base.m, base.d); if (depMs == null) continue;
-    const dur = routeDurMin(r, depMs);
-    const arrMs = dur != null ? depMs + dur*60000 : null;
+  const useAero = aeroCovers(base);
+  const outs = [];
+  if (useAero){
+    for (const r of aero.list){
+      if (r.dep_iata !== HOME) continue;
+      const p = partsIn(TPE_TZ, r._depMs);
+      if (p.y === base.y && p.m === base.m && p.d === base.d) outs.push({r, depMs:r._depMs, arrMs:r._arrMs});
+    }
+  } else if (routes){
+    for (const r of routes.out){
+      if (r.dep_iata !== HOME || !operatesOn(r, base.wd)) continue;
+      const depMs = routeDepMs(r, base.y, base.m, base.d); if (depMs == null) continue;
+      const dur = routeDurMin(r, depMs);
+      outs.push({r, depMs, arrMs: dur != null ? depMs + dur*60000 : null});
+    }
+  }
+  for (const {r, depMs, arrMs} of outs){
     const dest = r.arr_iata;
     let turn = null, night = null;
     if (arrMs != null){
@@ -566,19 +633,22 @@ function buildBoard(off){
     rows.push({r, dest, cls, reason, manual, depMs, arrMs, ret, alt, turn, night, base});
   }
   rows.sort((a,b) => a.depMs - b.depMs);
+  rows.source = useAero ? 'aero' : 'airlabs';
   return rows;
 }
 
 function liveFor(r, depMs){
-  if (!live) return null;
   const p = localParts(r.dep_iata, r, 'dep', depMs);
-  return live.map[fno(r)+'|'+p.y+'-'+pad(p.m)+'-'+pad(p.d)] || null;
+  const key = fno(r)+'|'+p.y+'-'+pad(p.m)+'-'+pad(p.d);
+  if (live && live.map[key]) return live.map[key];
+  if (r._aero) return aeroLive(r._aero);
+  return aero && aero.byKey[key] ? aeroLive(aero.byKey[key]) : null;
 }
 function badge(s){
   if (!s) return '<span class="badge b-none">表定</span>';
   const st = String(s.status||'').toLowerCase();
   const delay = +(s.dep_delayed || s.delayed || 0);
-  if (st === 'cancelled') return '<span class="badge b-bad">取消</span>';
+  if (st === 'cancelled') return s._aero ? '<span class="badge b-bad">已取消／停止追蹤</span>' : '<span class="badge b-bad">取消</span>';
   if (st === 'landed') return '<span class="badge b-ok">已抵達</span>';
   if (st === 'active' || st === 'en-route') return '<span class="badge b-info">飛行中</span>';
   if (delay >= 15) return '<span class="badge b-warn">延誤 '+delay+' 分</span>';
@@ -591,14 +661,14 @@ function liveDetail(s, kind){
   if (est) bits.push((kind==='dep' ? (s.dep_actual?'實際起飛 ':'預估起飛 ') : (s.arr_actual?'實際抵達 ':'預估抵達 ')) + String(est).slice(11,16));
   if (kind === 'dep' && s.dep_gate) bits.push('登機門 '+s.dep_gate);
   if (kind === 'arr' && s.arr_baggage) bits.push('行李轉盤 '+s.arr_baggage);
-  return bits.length ? '<div class="sub">即時：'+esc(bits.join('・'))+'</div>' : '';
+  return bits.length ? '<div class="sub">'+(s._aero ? 'FlightAware：' : '即時：')+esc(bits.join('・'))+'</div>' : '';
 }
 // 數字航廈顯示 T1、T2；字母或其他名稱（如 B、INTL）照原樣顯示
 const termLabel = t => /^\d+$/.test(String(t).replace(/^T/i,'')) ? 'T'+String(t).replace(/^T/i,'') : String(t);
 // 航廈：即時資料優先 → 班表欄位 → 未提供（不自行猜測）
 function terminalOf(r, s, which){
   const liveT = s && s[which+'_terminal'];
-  if (liveT) return {t:String(liveT), src:'即時'};
+  if (liveT) return {t:String(liveT), src: s._aero ? 'FA' : '即時'};
   const arr = r[which+'_terminals'];
   const fixed = Array.isArray(arr) ? arr.filter(Boolean).join('/') : (arr || r[which+'_terminal']);
   if (fixed) return {t:String(fixed), src:'表定'};
@@ -661,7 +731,7 @@ const FOOT = `<p class="foot" style="margin-top:14px"><img src="starlux-logo.png
 const dateKeyOf = b => b.y+'-'+pad(b.m)+'-'+pad(b.d);
 function offsetOfKey(k){ const [y,m,d] = k.split('-').map(Number); const tp = partsIn(TPE_TZ, Date.now()); return Math.round((Date.UTC(y,m-1,d) - Date.UTC(tp.y,tp.m-1,tp.d))/86400e3); }
 function herTrip(k){
-  const h = settings.her[k]; if (!h || !routes) return null;
+  const h = settings.her[k]; if (!h || (!routes && !aero)) return null;
   const x = buildBoard(offsetOfKey(k)).find(x => fno(x.r) === h.f && x.dest === h.dest);
   if (!x) return {k, h, missing:true};
   const ret = h.mode === 'night' ? (x.night || x.ret) : h.mode === 'turn' ? (x.turn || x.ret) : x.ret;
@@ -796,7 +866,7 @@ function altLine(x){
 function render(){
   renderTabs();
   const main = $('list');
-  if (!settings.apiKey){
+  if (!settings.apiKey && !aero){
     $('herBox').innerHTML = '';
     main.innerHTML = `<div class="setup">
       <h2>第一次使用：設定 API Key</h2>
@@ -812,7 +882,7 @@ function render(){
     $('statusLine').textContent = '';
     return;
   }
-  if (!routes){
+  if (!routes && !aero){
     $('herBox').innerHTML = '';
     main.innerHTML = lastError ? `<div class="err">${esc(lastError)}</div>` : '<div class="empty">讀取班表中…</div>';
     return;
@@ -845,7 +915,7 @@ function render(){
   let html = notice + `<input class="search" id="search" type="search" placeholder="搜尋航點、班號（例：東京、JX800）" value="${esc(query)}">`;
   if (lastError) html += `<div class="err">${esc(lastError)}</div>`;
   if (!list.length){
-    html += `<div class="empty">${board.length ? '找不到符合的航班' : '這一天 API 沒有回傳從台北出發的星宇航班。<br>若持續如此，請到設定「清除班表快取並重抓」。'}</div>`;
+    html += `<div class="empty">${board.length ? '找不到符合的航班' : (!routes && aero) ? 'FlightAware 的資料只涵蓋今天到明天左右。<br>其他日期需要設定 AirLabs API Key 才看得到班表。' : '這一天 API 沒有回傳從台北出發的星宇航班。<br>若持續如此，請到設定「清除班表快取並重抓」。'}</div>`;
   } else {
     const isHer = x => { const h = settings.her[dateKeyOf(x.base)]; return h && h.f === fno(x.r) && h.dest === x.dest; };
     const cardHtml = x => `<div class="flight ${pinned.has(x.dest)?'pinned':''} ${isHer(x)?'hercard':''}">
@@ -912,7 +982,7 @@ function render(){
   {
     const flying = new Set(board.map(x => x.dest));
     const off = {};
-    for (const r of routes.out){ if (r.dep_iata === HOME && !flying.has(r.arr_iata)) (off[r.arr_iata] = off[r.arr_iata] || []).push(r); }
+    for (const r of (routes ? routes.out : [])){ if (r.dep_iata === HOME && !flying.has(r.arr_iata)) (off[r.arr_iata] = off[r.arr_iata] || []).push(r); }
     const codes = Object.keys(off).sort((a,b)=>REGION_ORDER.indexOf(REGION(a))-REGION_ORDER.indexOf(REGION(b)) || a.localeCompare(b));
     if (codes.length){
       const ok = 'x:off';
@@ -922,7 +992,10 @@ function render(){
         <div class="note" style="padding:0 4px 10px">營運日來自 AirLabs，可能與星宇實際班表不同。</div></div></details>`;
     }
   }
-  html += `<p class="foot" style="margin-top:16px">資料來源：AirLabs API。班表更新於 ${new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}${live?'；即時狀態更新於 '+new Date(live.fetchedAt).toLocaleTimeString('zh-TW',{timeZone:TPE_TZ,hour:'2-digit',minute:'2-digit'}):''}。即時狀態只涵蓋接近起降時間的航班，其他顯示「表定」。正式資訊請以星宇航空官網／App 為準。</p>${FOOT}`;
+  const srcNote = board.source === 'aero'
+    ? `這天的航班清單來自 FlightAware AeroAPI（資料產生於 ${new Date(aero.generatedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ})}，每天更新一次）。`
+    : '';
+  html += `<p class="foot" style="margin-top:16px">${srcNote}資料來源：AirLabs API${routes ? '。班表更新於 ' + new Date(routes.fetchedAt).toLocaleString('zh-TW',{timeZone:TPE_TZ}) : '（未設定）'}${live?'；即時狀態更新於 '+new Date(live.fetchedAt).toLocaleTimeString('zh-TW',{timeZone:TPE_TZ,hour:'2-digit',minute:'2-digit'}):''}。即時狀態只涵蓋接近起降時間的航班，其他顯示「表定」。正式資訊請以星宇航空官網／App 為準。</p>${FOOT}`;
   main.innerHTML = html;
   if (!q) for (const d of main.querySelectorAll('details.grp')) d.addEventListener('toggle', () => {
     if (d.open) openKeys.add(d.dataset.key); else openKeys.delete(d.dataset.key);
@@ -937,6 +1010,7 @@ function render(){
 
 /* ---------- 事件 ---------- */
 async function refresh(forceLive, forceRoutes){
+  await loadAero();
   if (!settings.apiKey){ render(); return; }
   lastError = '';
   $('statusLine').textContent = '更新中…';
