@@ -83,6 +83,8 @@ button{font-family:inherit;color:inherit}
 .kv .k{min-width:34px;color:var(--muted)}
 .kv b{font-weight:400;font-size:13px;font-family:"Michroma",sans-serif;color:var(--copper)}
 .kv .d{font-size:11px;color:var(--copper)}
+.kv.done-out{font-size:12px;color:var(--muted);margin-top:0}
+.kv.done-out b{font-size:11px;opacity:.7}
 .tm-term{background:var(--gold-s);border:var(--line2);border-radius:8px;padding:0 6px;font-size:13px}
 .count{margin-top:12px;border:var(--line);border-radius:18px;background:var(--paper);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px}
 .count .lab{font-size:12px}
@@ -781,24 +783,40 @@ function herNotice(){
     const night = x.cls === 'long' || t.h.mode === 'night';
     const [st, ms] = herStatus(t);
     const fa = f => 'https://zh-tw.flightaware.com/live/flight/' + encodeURIComponent(f.replace(/^JX/i, 'SJX'));
+    // 去程落地後（她已在目的地），卡片改顯示回程的起飛與抵台時間
+    const place = nameOf(x.dest);
+    const onRet = !!(r && now >= (x.arrMs || x.depMs));
+    let tkDate = `${m}/${d} (${WEEK_EN[wd]})`, tkFrom = 'TPE', tkTo = x.dest, rows;
+    if (onRet){
+      const rdl = localParts(x.dest, r.r, 'dep', r.depMs), rdt = partsIn(TPE_TZ, r.depMs);
+      const sameClock = rdl.h === rdt.h && rdl.min === rdt.min && rdl.d === rdt.d;
+      const rdT = terminalOf(r.r, liveFor(r.r, r.depMs), 'dep');
+      const rdLab = dayDiffLabel(rdt, x.base), raLab = rp ? dayDiffLabel(rp, x.base) : '';
+      tkDate = `${rdt.m}/${rdt.d} (${WEEK_EN[rdt.wd]})`; tkFrom = x.dest; tkTo = 'TPE';
+      rows = `<div class="kv done-out"><span class="k">去程</span><b>${esc(fno(x.r))}</b><span>已抵達${esc(place)} ✓</span></div>
+        <div class="kv"><span class="k">起飛</span><b>${esc(fno(r.r))}</b><span>${sameClock ? '' : '當地 '}${fmt(rdl)} ${esc(place)}${rdT ? '・'+esc(termLabel(rdT.t)) : ''}${sameClock ? (rdLab ? `<span class="d"> ${rdLab}</span>` : '') : `<span class="d">（台北 ${fmt(rdt)}${rdLab ? ' '+rdLab : ''}）</span>`}</span></div>
+        <div class="kv"><span class="k">抵台</span><b>${esc(fno(r.r))}</b><span>${rp ? fmt(rp) : '--:--'} 台北${raLab ? `<span class="d"> ${raLab}</span>` : ''}</span><span class="tm-term">落地 ${arrT ? esc(termLabel(arrT.t)) : '未提供'}</span></div>`;
+    } else {
+      rows = `<div class="kv"><span class="k">去程</span><b>${esc(fno(x.r))}</b><span>${fmt(dp)} 起飛${depT ? '・'+esc(termLabel(depT.t)) : ''}</span></div>
+        <div class="kv"><span class="k">回程</span>${r ? `<b>${esc(fno(r.r))}</b><span>${rp ? fmt(rp) : '--:--'} 抵台${rp && dayDiffLabel(rp, x.base) ? `<span class="d"> ${dayDiffLabel(rp, x.base)}</span>` : ''}</span><span class="tm-term">落地 ${arrT ? esc(termLabel(arrT.t)) : '未提供'}</span>` : '<span>找不到回程班機</span>'}</div>`;
+    }
     out += `<div class="sf">
       <div class="ticket">
         <span class="notch l"></span><span class="notch r"></span>
-        <div class="tk-top"><span class="tk-name"><img src="starlux-mark.png" alt="">BOARDING NOTE</span><span>${m}/${d} (${WEEK_EN[wd]})</span></div>
+        <div class="tk-top"><span class="tk-name"><img src="starlux-mark.png" alt="">${onRet ? 'RETURN NOTE' : 'BOARDING NOTE'}</span><span>${tkDate}</span></div>
         <div class="tk-route">
-          <div><div class="tk-code">TPE</div><div class="tk-city">台北桃園</div></div>
+          <div><div class="tk-code">${esc(tkFrom)}</div><div class="tk-city">${esc(tkFrom === HOME ? '台北桃園' : nameOf(tkFrom))}</div></div>
           <div class="tk-mid"><svg width="34" height="22" viewBox="0 0 64 40"><use href="#plane"/></svg></div>
-          <div style="text-align:right"><div class="tk-code">${esc(x.dest)}</div><div class="tk-city">${esc(nameOf(x.dest))}</div></div>
+          <div style="text-align:right"><div class="tk-code">${esc(tkTo)}</div><div class="tk-city">${esc(tkTo === HOME ? '台北桃園' : nameOf(tkTo))}</div></div>
         </div>
       </div>
       ${PIN_SVG}
       <div class="env">
         <svg class="flap" viewBox="0 0 358 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 2 L179 54 L358 2" fill="none" stroke="#404B4E" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
         <div class="stamp">${ART.stampSvg(x.dest, country, 46)}</div>
-        <div class="kv"><span class="k">去程</span><b>${esc(fno(x.r))}</b><span>${fmt(dp)} 起飛${depT ? '・'+esc(termLabel(depT.t)) : ''}</span></div>
-        <div class="kv"><span class="k">回程</span>${r ? `<b>${esc(fno(r.r))}</b><span>${rp ? fmt(rp) : '--:--'} 抵台${rp && dayDiffLabel(rp, x.base) ? `<span class="d"> ${dayDiffLabel(rp, x.base)}</span>` : ''}</span><span class="tm-term">落地 ${arrT ? esc(termLabel(arrT.t)) : '未提供'}</span>` : '<span>找不到回程班機</span>'}</div>
+        ${rows}
         <div class="count"><div><div class="lab muted">${st}</div><div class="big ${ms ? '' : 'done'}">${ms ? bigCount(ms) : '♥'}</div></div><div style="text-align:right" class="lab">${night ? '過夜，隔天回來' : '當天回來'}<br>記得去接她 <span style="color:#E07F72">♥</span></div></div>
-        <div class="row"><button type="button" class="pill copper" data-hcal="${k}">加入行事曆</button><a class="pill" href="${fa(fno(x.r))}" target="_blank" rel="noopener">FlightAware</a>${off>=0&&off<=6&&off!==dayOffset ? `<button type="button" class="pill gs" data-d="${off}">看這天航班</button>` : ''}<button type="button" class="pill" data-hclear="${k}">取消標記</button></div>
+        <div class="row"><button type="button" class="pill copper" data-hcal="${k}">加入行事曆</button><a class="pill" href="${fa(fno(onRet ? r.r : x.r))}" target="_blank" rel="noopener">FlightAware</a>${off>=0&&off<=6&&off!==dayOffset ? `<button type="button" class="pill gs" data-d="${off}">看這天航班</button>` : ''}<button type="button" class="pill" data-hclear="${k}">取消標記</button></div>
       </div>
     </div>`;
   }
