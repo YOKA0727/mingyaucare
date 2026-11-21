@@ -269,7 +269,7 @@ dialog::backdrop{background:rgba(64,75,78,.45)}
     <label class="f" for="turnMin">當天來回：抵達後最短折返時間（分鐘，預設 40）</label>
     <input type="number" id="turnMin" min="10" max="600" step="5">
 
-    <label class="f" for="remindMin">加入行事曆時：Sophie 落地前幾分鐘提醒（預設 60）</label>
+    <label class="f" for="remindMin">加入行事曆時：Sophie 落地前幾分鐘提醒（預設 90）</label>
     <input type="number" id="remindMin" min="0" max="600" step="5">
 
     <label class="f"><input type="checkbox" id="autoRefresh"> App 開著時每 15 分鐘自動更新即時狀態（會消耗 API 次數）</label>
@@ -355,9 +355,11 @@ const store = {
   del(k){ try{ localStorage.removeItem('jx.'+k); }catch(e){} },
 };
 const settings = Object.assign({
-  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[], her:{}, remindMin:60
+  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[], her:{}, remindMin:90
 }, store.get('settings', {}));
 delete settings.longHaul; // 舊版固定清單已改為自動判斷
+// 落地提醒預設由 60 分鐘改為 90 分鐘：沿用舊預設 60 的人一併改成 90（自己改過的數字不動）
+if (!settings.remindV){ if (settings.remindMin === 60) settings.remindMin = 90; settings.remindV = 2; store.set('settings', settings); }
 if (!settings.overrides || typeof settings.overrides !== 'object') settings.overrides = {};
 if (!settings.her || typeof settings.her !== 'object') settings.her = {};
 // 清掉 10 天前的「她的航班」標記
