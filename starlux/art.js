@@ -282,7 +282,7 @@ const COUNTRY_ART = {
 const CONT_ART = { '亞洲':['tw',MZ], '美洲':['us',GD], '歐洲':['cz',MZ], '其他':['other',PAPER] };
 // 城市 → 專屬橫幅
 const CITY_BANNER = {
-  NRT:'tyo', HND:'tyo', KIX:'kix', CTS:'cts', OKA:'oka', MMY:'oka', HKG:'hkg', MFM:'mfm', SGN:'sgn', HAN:'han', DAD:'dad',
+  NRT:'tyo', HND:'tyo', KIX:'kix', CTS:'cts', OKA:'oka', MMY:'oka', SHI:'oka', HKG:'hkg', MFM:'mfm', SGN:'sgn', HAN:'han', DAD:'dad',
   BKK:'bkk', SIN:'sin', KUL:'kul', MNL:'mnl', LAX:'lax', ONT:'lax', SFO:'sfo', SEA:'sea', PRG:'prg',
 };
 const CITY_MOTIF = { MFM:'mo' };
@@ -307,7 +307,7 @@ const imgTag = (name, size) => `<img src="${imgOf(name)}" width="${size}" height
 const countryIcon = (country, size = 44) => imgTag(COUNTRY_IMG[country] || 'other', size);
 const contIcon = (cont, size = 62) => imgTag(CONT_IMG[cont] || 'other', size);
 /* 城市橫幅：使用者提供的色鉛筆風圖片（art/banner-*.jpg，檔名用圖上的城市簡稱） */
-const CITY_IMG = { NRT:'TYO', HND:'TYO', KIX:'OSA', CTS:'SPK', OKA:'OKA', MMY:'OKA', HKG:'HKG', MFM:'MFM', SGN:'SGN', HAN:'HAN', DAD:'DAD',
+const CITY_IMG = { NRT:'TYO', HND:'TYO', KIX:'OSA', CTS:'SPK', OKA:'OKA', MMY:'OKA', SHI:'OKA', HKG:'HKG', MFM:'MFM', SGN:'SGN', HAN:'HAN', DAD:'DAD',
   BKK:'BKK', SIN:'SIN', KUL:'KUL', MNL:'MNL', LAX:'LAX', ONT:'LAX', SFO:'SFO', SEA:'SEA', PRG:'PRG' };
 const motifOfCity = (code, country) => CITY_MOTIF[code] || (COUNTRY_ART[country] || COUNTRY_ART['其他'])[0];
 function bannerSvg(code, country){
