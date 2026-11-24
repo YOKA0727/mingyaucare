@@ -50,7 +50,7 @@ button{font-family:inherit;color:inherit}
 .iconbtn.gs{background:var(--gold-s)}
 
 /* 主視覺 */
-.hero .crew{display:block;width:100%;aspect-ratio:352/420;height:auto;object-fit:cover;object-position:50% 30%;border-bottom:var(--line)}
+.hero .crew{display:block;width:100%;aspect-ratio:1/1;height:auto;object-fit:cover;object-position:50% 50%;border-bottom:var(--line)}
 .hero .band{padding:10px 14px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .hero .who{display:flex;align-items:center;gap:10px;min-width:0}
 .hero .ava{width:46px;height:46px;border-radius:50%;border:var(--line);object-fit:cover;object-position:50% 20%;flex:0 0 auto}
@@ -115,7 +115,11 @@ button.cd{cursor:pointer}
 .cd.back .c{font-family:"Huninn",sans-serif;font-weight:400;font-size:10px;color:var(--gold)}
 .cd.night::after{content:'☾';position:absolute;top:1px;right:3px;font-size:10px;color:var(--copper)}
 .cd.pad{min-height:0}
-.cal-leg{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:10px}
+.calfoot{display:flex;align-items:flex-end;gap:6px;margin-top:6px}
+.calfoot-tx{flex:1;min-width:0;padding-bottom:6px}
+.calfoot .note{margin-top:6px;line-height:1.5}
+.cal-sophie{height:156px;width:auto;flex:0 0 auto;margin:-8px -4px -6px 0;display:block}
+.cal-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
 .cal-leg .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:2px solid var(--ink)}
 .cal-leg .sw.mark{background:var(--copper-s)} .cal-leg .sw.away{background:var(--mizu);border-color:transparent} .cal-leg .sw.back{background:var(--gold-s);border-style:dashed}
 .sf-more{border:var(--line);border-radius:20px;margin-bottom:18px;background:var(--paper);overflow:hidden}
@@ -266,7 +270,7 @@ dialog::backdrop{background:rgba(64,75,78,.45)}
     </div>
   </div>
   <div class="card hero">
-    <img class="crew" src="crew.jpg" alt="星宇空服員插畫" width="900" height="1200">
+    <img class="crew" src="crew2.jpg" alt="星宇空服員插畫" width="1080" height="1080">
     <div class="band">
       <div class="who"><img class="ava" src="couple.jpg" alt="YOKA 與 Sophie"><div class="names">YOKA <span class="h">&amp;</span> Sophie <span class="h">♥</span></div></div>
       <span class="pill copper">✦ 上班順飛</span>
@@ -830,8 +834,10 @@ function herCalendar(trips, tk){
   return `<div class="calbox">
     <div class="calh"><button type="button" class="calnav" data-calnav="-1" aria-label="上個月">‹</button><div class="calt"><span class="hand">${y}</span>${m} 月</div><button type="button" class="calnav" data-calnav="1" aria-label="下個月">›</button></div>
     <div class="calgrid">${cells}</div>
-    <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span>☾ 過夜</span></div>
-    <div class="note" style="text-align:center;margin-top:2px">點有標記的日期，打開她那天的飛班</div>
+    <div class="calfoot"><div class="calfoot-tx">
+      <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span>☾ 過夜</span></div>
+      <div class="note">點有標記的日期，<br>打開她那天的飛班 ♥</div>
+    </div><img class="cal-sophie" src="sophie-cal.png" alt="穿制服的 Sophie" width="265" height="640"></div>
   </div>`;
 }
 function herNotice(){
