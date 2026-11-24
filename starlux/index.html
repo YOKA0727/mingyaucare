@@ -92,6 +92,44 @@ button{font-family:inherit;color:inherit}
 .count .big span{font-size:15px}
 .count .big.done{font-size:20px}
 .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+/* 月曆 */
+.calbox{border:var(--line);border-radius:var(--r);background:var(--paper);padding:12px 12px 10px;margin-bottom:14px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calt{font-size:18px;display:flex;align-items:baseline;gap:8px}
+.calt .hand{font-size:24px;color:var(--copper)}
+.calnav{width:36px;height:36px;border:var(--line2);border-radius:50%;background:var(--gold-s);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0 0 3px}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calwd{font-size:11px;color:var(--muted);text-align:center;padding:2px 0 4px}
+.calwd.we{color:var(--copper)}
+.cd{min-height:46px;border:2.5px solid transparent;background:none;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;padding:4px 0 3px;font-size:14px;position:relative;font-family:inherit;color:var(--ink);min-width:0}
+button.cd{cursor:pointer}
+.cd .n{line-height:20px;min-width:22px;text-align:center}
+.cd .c{font-family:"Courier Prime",monospace;font-weight:700;font-size:10.5px;line-height:1;letter-spacing:-.3px}
+.cd.past{color:rgba(64,75,78,.45)}
+.cd.today .n{background:var(--ink);color:var(--paper);border-radius:999px}
+.cd.mark{background:var(--copper-s);border:var(--line2);color:var(--ink)}
+.cd.mark .c{color:var(--copper)}
+.cd.away{background:var(--mizu)}
+.cd.away .c{color:var(--muted)}
+.cd.back{background:var(--gold-s);border:2.5px dashed var(--ink)}
+.cd.back .c{font-family:"Huninn",sans-serif;font-weight:400;font-size:10px;color:var(--gold)}
+.cd.night::after{content:'☾';position:absolute;top:1px;right:3px;font-size:10px;color:var(--copper)}
+.cd.pad{min-height:0}
+.cal-leg{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:10px}
+.cal-leg .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:2px solid var(--ink)}
+.cal-leg .sw.mark{background:var(--copper-s)} .cal-leg .sw.away{background:var(--mizu);border-color:transparent} .cal-leg .sw.back{background:var(--gold-s);border-style:dashed}
+.sf-more{border:var(--line);border-radius:20px;margin-bottom:18px;background:var(--paper);overflow:hidden}
+.sf-more>summary{list-style:none;cursor:pointer;padding:11px 40px 11px 16px;font-size:14px;position:relative}
+.sf-more>summary::-webkit-details-marker{display:none}
+.sf-more>summary::after{content:'›';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:22px;transition:transform .15s}
+.sf-more[open]>summary::after{transform:translateY(-50%) rotate(90deg)}
+.sfrow{display:flex;align-items:center;gap:8px;width:100%;border:0;border-top:2.5px dashed rgba(64,75,78,.3);background:none;padding:10px 16px;font-size:14px;text-align:left;cursor:pointer;flex-wrap:wrap}
+.sfrow .lat{font-size:11px;color:var(--copper)}
+.sfrow .tag{margin-left:auto}
+.herdlg{padding:16px 16px 14px 30px}
+.herdlg .sf{margin-bottom:6px}
+.herdlg .tk-name{letter-spacing:2px;white-space:nowrap}
+.herdlg .tk-top>span:last-child{white-space:nowrap}
 .sf-empty{border:3px dashed rgba(64,75,78,.45);border-radius:20px;padding:14px 16px;font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7}
 
 /* 日期列（往下滑時固定在上方） */
@@ -295,6 +333,9 @@ dialog::backdrop{background:rgba(64,75,78,.45)}
   </div>
 </dialog>
 
+<dialog id="herDlg">
+  <div class="dlg herdlg"><div id="herDlgBody"></div><div style="text-align:center"><button class="btn ghost" id="herDlgClose" type="button">關閉</button></div></div>
+</dialog>
 <dialog id="rawDlg">
   <div class="dlg">
     <h2>API 原始班表</h2>
@@ -762,21 +803,21 @@ function bigCount(ms){
   return (h ? `${h}<span> 小時 </span>` : '') + `${m}<span> 分</span>`;
 }
 const PIN_SVG = `<svg class="spin" width="96" height="34" viewBox="0 0 96 34" aria-hidden="true"><g stroke="#404B4E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M14 20 H84 a8 8 0 0 0 0 -16 H24"/><path d="M14 26 H80"/></g><rect x="4" y="14" width="16" height="16" rx="4" fill="#C3CBCD" stroke="#404B4E" stroke-width="3"/></svg>`;
-function herNotice(){
-  const keys = Object.keys(settings.her).sort();
-  const now = Date.now();
-  let out = '';
-  for (const k of keys){
-    const off = offsetOfKey(k); if (off < -6 || off > 14) continue;
-    const t = herTrip(k); if (!t) continue;
-    const [y,m,d] = k.split('-').map(Number), wd = new Date(Date.UTC(y,m-1,d)).getUTCDay();
-    const dl = `${m}/${d}（${WEEK_ZH[wd]}）`;
-    if (t.missing){
-      out += `<div class="sf-empty">♥ ${dl} 標記的 <span class="lat">${esc(t.h.f)}</span> → ${esc(nameOf(t.h.dest))}：班表裡找不到這班（可能停飛或班表已變更）。<button type="button" class="hbtn ghost" data-hclear="${k}">移除</button></div>`;
-      continue;
-    }
-    if (t.ret && t.ret.arrMs && t.ret.arrMs < now - 3*3600e3) continue;   // 已回來超過 3 小時就不顯示
-    if (!t.ret && t.x.depMs < now - 24*3600e3) continue;
+// 今天（台北）的日期 key 與日期加減
+const todayKey = () => dateKeyOf(partsIn(TPE_TZ, Date.now()));
+function keyAdd(k, n){ const [y,m,d] = k.split('-').map(Number); const t = new Date(Date.UTC(y,m-1,d+n)); return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate()); }
+function keyLabel(k){ const [y,m,d] = k.split('-').map(Number); return `${m}/${d}（${WEEK_ZH[new Date(Date.UTC(y,m-1,d)).getUTCDay()]}）`; }
+// 行程是否已結束：回到台北超過 3 小時（沒有回程資料時：出發超過 24 小時）
+function tripDone(t, now){ if (t.missing) return t.k < todayKey(); return t.ret && t.ret.arrMs ? t.ret.arrMs < now - 3*3600e3 : t.x.depMs < now - 24*3600e3; }
+// 「現在」的飛班：今天出發的，或已經出發、還沒回到台北的（過夜班）
+function tripNow(t, now, tk){ if (tripDone(t, now)) return false; return t.k === tk || (!t.missing && now >= t.x.depMs); }
+function herMissingHtml(t){
+  return `<div class="sf-empty">♥ ${keyLabel(t.k)} 標記的 <span class="lat">${esc(t.h.f)}</span> → ${esc(nameOf(t.h.dest))}：班表裡找不到這班（可能停飛或班表已變更）。<button type="button" class="hbtn ghost" data-hclear="${t.k}">移除</button></div>`;
+}
+function herCard(t){
+  if (t.missing) return herMissingHtml(t);
+  const k = t.k, off = offsetOfKey(k), now = Date.now();
+  const [y,m,d] = k.split('-').map(Number), wd = new Date(Date.UTC(y,m-1,d)).getUTCDay();
     const x = t.x, r = t.ret, country = REGION(x.dest);
     const dp = partsIn(TPE_TZ, x.depMs);
     const rp = r && r.arrMs ? partsIn(TPE_TZ, r.arrMs) : null;
@@ -802,7 +843,7 @@ function herNotice(){
       rows = `<div class="kv"><span class="k">去程</span><b>${esc(fno(x.r))}</b><span>${fmt(dp)} 起飛${depT ? '・'+esc(termLabel(depT.t)) : ''}</span></div>
         <div class="kv"><span class="k">回程</span>${r ? `<b>${esc(fno(r.r))}</b><span>${rp ? fmt(rp) : '--:--'} 抵台${rp && dayDiffLabel(rp, x.base) ? `<span class="d"> ${dayDiffLabel(rp, x.base)}</span>` : ''}</span><span class="tm-term">落地 ${arrT ? esc(termLabel(arrT.t)) : '未提供'}</span>` : '<span>找不到回程班機</span>'}</div>`;
     }
-    out += `<div class="sf">
+    return `<div class="sf">
       <div class="ticket">
         <span class="notch l"></span><span class="notch r"></span>
         <div class="tk-top"><span class="tk-name"><img src="starlux-mark.png" alt="">${onRet ? 'RETURN NOTE' : 'BOARDING NOTE'}</span><span>${tkDate}</span></div>
@@ -821,9 +862,69 @@ function herNotice(){
         <div class="row"><button type="button" class="pill copper" data-hcal="${k}">加入行事曆</button><a class="pill" href="${fa(fno(onRet ? r.r : x.r))}" target="_blank" rel="noopener">FlightAware</a>${off>=0&&off<=6&&off!==dayOffset ? `<button type="button" class="pill gs" data-d="${off}">看這天航班</button>` : ''}<button type="button" class="pill" data-hclear="${k}">取消標記</button></div>
       </div>
     </div>`;
+}
+let calYM = null;   // 月曆目前顯示的年月
+function herCalendar(trips, tk){
+  if (!calYM){ const p = partsIn(TPE_TZ, Date.now()); calYM = {y:p.y, m:p.m}; }
+  const {y, m} = calYM, now = Date.now();
+  const first = new Date(Date.UTC(y,m-1,1)).getUTCDay(), days = new Date(Date.UTC(y,m,0)).getUTCDate();
+  // 每一天的狀態：mark＝出發日、away＝在外站、back＝回台日
+  const info = {};
+  for (const t of trips){
+    info[t.k] = {type:'mark', t};
+    if (t.missing || !t.ret || !t.ret.arrMs) continue;
+    const rk = dateKeyOf(partsIn(TPE_TZ, t.ret.arrMs));
+    for (let i = 1, kk = keyAdd(t.k, 1); kk <= rk && i < 20; i++, kk = keyAdd(t.k, i)){
+      if (info[kk] && info[kk].type === 'mark') continue;
+      info[kk] = {type: kk === rk ? 'back' : 'away', t};
+    }
   }
+  let cells = WEEK_ZH.map((w,i) => `<div class="calwd${i===0||i===6?' we':''}">${w}</div>`).join('');
+  for (let i = 0; i < first; i++) cells += '<div class="cd pad"></div>';
+  for (let d = 1; d <= days; d++){
+    const k = y+'-'+pad(m)+'-'+pad(d), x = info[k], isToday = k === tk;
+    const cls = ['cd', isToday ? 'today' : '', k < tk ? 'past' : ''];
+    let sub = '', attr = '';
+    if (x){
+      const t = x.t, night = !t.missing && (t.x.cls === 'long' || t.h.mode === 'night');
+      cls.push(x.type); if (x.type === 'mark' && night) cls.push('night');
+      sub = x.type === 'mark' ? `<span class="c">${esc(t.missing ? t.h.dest : t.x.dest)}</span>` : x.type === 'back' ? '<span class="c">回台</span>' : `<span class="c">${esc(t.x.dest)}</span>`;
+      attr = ` data-hday="${t.k}" aria-label="${esc(keyLabel(k))} Sophie 的飛班"`;
+    } else {
+      const off = offsetOfKey(k);
+      if (off >= 0 && off <= 6) attr = ` data-d="${off}" aria-label="看 ${esc(keyLabel(k))} 的航班"`;
+    }
+    cells += attr ? `<button type="button" class="${cls.join(' ').trim()}"${attr}><span class="n">${d}</span>${sub}</button>` : `<div class="${cls.join(' ').trim()}"><span class="n">${d}</span></div>`;
+  }
+  return `<div class="calbox">
+    <div class="calh"><button type="button" class="calnav" data-calnav="-1" aria-label="上個月">‹</button><div class="calt"><span class="hand">${y}</span>${m} 月</div><button type="button" class="calnav" data-calnav="1" aria-label="下個月">›</button></div>
+    <div class="calgrid">${cells}</div>
+    <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span>☾ 過夜</span></div>
+    <div class="note" style="text-align:center;margin-top:2px">點有標記的日期，打開她那天的飛班</div>
+  </div>`;
+}
+function herNotice(){
+  const now = Date.now(), tk = todayKey();
+  const trips = Object.keys(settings.her).sort().map(herTrip).filter(Boolean);
+  const cur = trips.filter(t => tripNow(t, now, tk));
+  const later = trips.filter(t => !cur.includes(t) && t.k > tk);
   const head = `<div class="sf-title"><span class="hand">Sophie's flight</span><span class="q">今天飛哪裡呢？</span></div>`;
-  return head + (out || `<div class="sf-empty">在下方航班卡按「♥ Sophie 飛這班」，她的登機票就會夾在這裡，還有起飛／落地倒數。</div>`);
+  let out = cur.map(herCard).join('');
+  if (!out){
+    const nx = later[0];
+    out = `<div class="sf-empty">${trips.length ? `今天沒有她的飛班 ♥${nx ? `<br>下一班：${keyLabel(nx.k)} <span class="lat">${esc(nx.missing ? nx.h.f : fno(nx.x.r))}</span> → ${esc(nameOf(nx.missing ? nx.h.dest : nx.x.dest))}` : ''}` : '在下方航班卡按「♥ Sophie 飛這班」，她的登機票就會夾在這裡，還有起飛／落地倒數。'}</div>`;
+  }
+  const more = later.length ? `<details class="sf-more"><summary>之後標記的飛班（${later.length}）</summary>${later.map(t => {
+      const night = !t.missing && (t.x.cls === 'long' || t.h.mode === 'night');
+      return `<button type="button" class="sfrow" data-hday="${t.k}"><span>${keyLabel(t.k)}</span><span class="lat">${esc(t.missing ? t.h.f : fno(t.x.r))}</span><span>→ ${esc(nameOf(t.missing ? t.h.dest : t.x.dest))}</span><span class="tag ${night ? 'long' : ''}">${t.missing ? '找不到' : night ? '過夜' : '當天'}</span></button>`;
+    }).join('')}</details>` : '';
+  return head + out + herCalendar(trips, tk) + more;
+}
+function openHerDay(k){
+  const t = herTrip(k);
+  if (!t) return;
+  $('herDlgBody').innerHTML = herCard(t);
+  if (!$('herDlg').open) $('herDlg').showModal();
 }
 
 /* ---------- 行事曆 ---------- */
@@ -1047,13 +1148,17 @@ document.addEventListener('click', e => {
   if (hb){
     if (hb.dataset.hset){ const [k,f,dest,mode] = hb.dataset.hset.split('|'); settings.her[k] = {f, dest, mode}; saveSettings(); render(); }
     else if (hb.dataset.hmode){ const [k,mode] = hb.dataset.hmode.split('|'); if (settings.her[k]){ settings.her[k].mode = mode; saveSettings(); render(); } }
-    else if (hb.dataset.hclear){ delete settings.her[hb.dataset.hclear]; saveSettings(); render(); }
+    else if (hb.dataset.hclear){ delete settings.her[hb.dataset.hclear]; saveSettings(); if ($('herDlg').open) $('herDlg').close(); render(); }
     else if (hb.dataset.hcal){ openCalDialog(hb.dataset.hcal); }
     return;
   }
+  const hd = e.target.closest('[data-hday]');
+  if (hd){ openHerDay(hd.dataset.hday); return; }
+  const cn = e.target.closest('[data-calnav]');
+  if (cn){ const n = +cn.dataset.calnav, d = new Date(Date.UTC(calYM.y, calYM.m-1+n, 1)); calYM = {y:d.getUTCFullYear(), m:d.getUTCMonth()+1}; render(); return; }
   const t = e.target.closest('[data-d],[data-pin]');
   if (!t) return;
-  if (t.dataset.d != null){ dayOffset = +t.dataset.d; render(); if (t.closest('#herBox')) document.querySelector('.daybar').scrollIntoView({behavior:'smooth'}); }
+  if (t.dataset.d != null){ if ($('herDlg').open) $('herDlg').close(); dayOffset = +t.dataset.d; render(); if (t.closest('#herBox')) document.querySelector('.daybar').scrollIntoView({behavior:'smooth'}); }
   if (t.dataset.pin){
     const c = t.dataset.pin, i = settings.pinned.indexOf(c);
     if (i >= 0) settings.pinned.splice(i,1); else settings.pinned.push(c);
@@ -1119,6 +1224,7 @@ function renderRaw(){
 $('rawBtn').onclick = () => { $('settingsDlg').close(); $('rawSearch').value = ''; renderRaw(); $('rawDlg').showModal(); };
 $('rawSearch').oninput = renderRaw;
 $('rawClose').onclick = () => $('rawDlg').close();
+$('herDlgClose').onclick = () => $('herDlg').close();
 $('clearCacheBtn').onclick = () => { store.del('routes'); store.del('live'); routes = null; live = null; $('settingsDlg').close(); refresh(true, true); };
 
 let timer = null;
