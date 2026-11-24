@@ -173,6 +173,7 @@ button.cd{cursor:pointer}
 .grp.country .gbody{padding:0 8px 8px}
 .grp.off>summary{padding-left:16px}
 .gtools{display:flex;gap:10px;justify-content:center;margin:4px 0 16px}
+.gtools.top{justify-content:flex-start;margin:-2px 4px 12px}
 
 /* 航班卡 */
 .flight{border:var(--line);border-radius:20px;overflow:hidden;margin-top:10px;background:var(--paper)}
@@ -1003,7 +1004,7 @@ function render(){
       const country = REGION(x.dest), cont = CONTINENT(country);
       ((tree[cont] = tree[cont] || {})[country] = tree[cont][country] || []).push(x);
     }
-    html += '<div class="group-title">全部航點（點選展開）</div>';
+    html += '<div class="group-title">全部航點（點選展開）</div>' + `<div class="gtools top"><button type="button" class="pill sm" data-gall="open">全部展開</button><button type="button" class="pill sm" data-gall="close">全部收合</button></div>`;
     for (const cont of CONTINENT_ORDER){
       if (!tree[cont]) continue;
       const countries = REGION_ORDER.filter(c => tree[cont][c]);
@@ -1027,7 +1028,7 @@ function render(){
       }
       html += '</div></details>';
     }
-    html += `<div class="gtools"><button type="button" class="pill sm" id="expandAll">全部展開</button><button type="button" class="pill sm" id="collapseAll">全部收合</button></div>`;
+    html += `<div class="gtools"><button type="button" class="pill sm" data-gall="open">全部展開</button><button type="button" class="pill sm" data-gall="close">全部收合</button></div>`;
   }
   // 這一天沒有班的航點（API 有這條航線，但營運日不含這天）
   {
@@ -1049,9 +1050,11 @@ function render(){
     if (d.open) openKeys.add(d.dataset.key); else openKeys.delete(d.dataset.key);
     store.set('open', [...openKeys]);
   });
-  const ea = $('expandAll'), ca = $('collapseAll');
-  if (ea) ea.onclick = () => { for (const d of main.querySelectorAll('details.grp')) openKeys.add(d.dataset.key); store.set('open', [...openKeys]); render(); };
-  if (ca) ca.onclick = () => { openKeys.clear(); store.set('open', []); render(); };
+  for (const b of main.querySelectorAll('[data-gall]')) b.onclick = () => {
+    if (b.dataset.gall === 'open'){ for (const d of main.querySelectorAll('details.grp')) openKeys.add(d.dataset.key); store.set('open', [...openKeys]); }
+    else { openKeys.clear(); store.set('open', []); }
+    render();
+  };
   const s = $('search');
   s.oninput = e => { query = e.target.value; const pos = e.target.selectionStart; render(); const n = $('search'); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(_){} };
 }
