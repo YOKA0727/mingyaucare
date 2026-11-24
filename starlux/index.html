@@ -118,8 +118,8 @@ button.cd{cursor:pointer}
 .calfoot{display:flex;align-items:flex-end;gap:6px;margin-top:6px}
 .calfoot-tx{flex:1;min-width:0;padding-bottom:6px}
 .calfoot .note{margin-top:6px;line-height:1.5}
-.cal-sophie{height:100px;width:auto;flex:0 0 auto;margin:0 14px -10px 0;display:block;position:relative}
-.calfoot.lift .cal-sophie{margin-top:-46px}
+.cal-sophie{height:118px;width:auto;flex:0 0 auto;margin:0 6px 0 0;display:block;position:relative}
+.calfoot.lift .cal-sophie{margin-top:-52px}
 .cal-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
 .cal-leg .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:2px solid var(--ink)}
 .cal-leg .sw.mark{background:var(--copper-s)} .cal-leg .sw.away{background:var(--mizu);border-color:transparent} .cal-leg .sw.back{background:var(--gold-s);border-style:dashed}
@@ -838,7 +838,7 @@ function herCalendar(trips, tk){
     <div class="calfoot${(7 - (first + days) % 7) % 7 >= 2 ? ' lift' : ''}"><div class="calfoot-tx">
       <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span>☾ 過夜</span></div>
       <div class="note">點有標記的日期，<br>打開她那天的飛班 ♥</div>
-    </div><img class="cal-sophie" src="sophie-cal2.png?v=2" alt="穿制服的 Sophie" width="259" height="337"></div>
+    </div><img class="cal-sophie" src="sophie-chibi.png" alt="穿制服的 Sophie" width="206" height="420"></div>
   </div>`;
 }
 function herNotice(){
