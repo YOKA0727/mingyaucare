@@ -94,6 +94,9 @@ button{font-family:inherit;color:inherit}
 .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 /* 月曆 */
 .calbox{border:var(--line);border-radius:var(--r);background:var(--paper);padding:12px 12px 10px;margin-bottom:14px;overflow:hidden}
+.calbox{position:relative}
+.calbox::before{content:'';position:absolute;left:0;right:0;top:96px;height:230px;background:url(starlux-mark.png) center/auto 150px no-repeat;opacity:.08;pointer-events:none}
+.calbox>*{position:relative}
 .calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .calt{font-size:18px;display:flex;align-items:baseline;gap:8px}
 .calt .hand{font-size:24px;color:var(--copper)}
