@@ -1026,7 +1026,7 @@ function herNotice(){
 }
 // 只重畫 Sophie 區塊（天氣回來時用，不動下方航班列表）
 function renderHerOnly(){
-  if (!routes && !aero) return;
+  if (!routes && !(typeof aero !== 'undefined' && aero)) return;
   if ($('herBox').innerHTML) $('herBox').innerHTML = herNotice();
   if ($('herDlg').open && $('herDlg').dataset.k){ const t = herTrip($('herDlg').dataset.k); if (t) $('herDlgBody').innerHTML = herCard(t); }
 }
