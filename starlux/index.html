@@ -126,6 +126,29 @@ button.cd{cursor:pointer}
 .cal-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
 .cal-leg .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:2px solid var(--ink)}
 .cal-leg .sw.mark{background:var(--copper-s)} .cal-leg .sw.away{background:var(--mizu);border-color:transparent} .cal-leg .sw.back{background:var(--gold-s);border-style:dashed}
+.meet{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--green);border:var(--line2);border-radius:16px;padding:7px 8px 7px 12px;margin:0 0 10px}
+.meet .pill{flex:0 0 auto}
+.meet .pill.green{background:var(--paper)}
+.mt{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;min-width:0}
+.mt b{font-weight:400;font-size:24px;color:var(--copper);line-height:1}
+.mt .mt-s{font-size:13px}
+.mt .mt-d{font-size:12px;color:var(--muted);width:100%}
+.mt-empty{font-size:12px;color:var(--ink)}
+.cd.off{background:var(--green)}
+.cd.off .c{font-family:"Huninn",sans-serif;font-weight:400;font-size:10px;color:#5d6b3a}
+.cd.offdot::before{content:'';position:absolute;left:4px;top:4px;width:7px;height:7px;border-radius:50%;background:#8FA463}
+.calgrid.editing .cd.edit{border:2px dashed rgba(64,75,78,.35)}
+.calgrid.editing .cd.edit.off{border:var(--line2)}
+.cal-leg .sw.off{background:var(--green);border-color:transparent}
+.lc{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;border:var(--line2);border-radius:16px;background:var(--mizu);padding:8px 12px}
+.lc-t{font-size:22px;line-height:1.2}
+.lc-t .d{font-size:12px;color:var(--ink);opacity:.75}
+.lc-w{display:flex;align-items:center;gap:6px;text-align:left;font-size:13px;line-height:1.3}
+.lc-w .ic{font-size:26px;line-height:1}
+.lc-w b{font-weight:400;font-size:17px}
+.tk-mid.fly{min-height:22px}
+.tk-mid.fly::after{content:'';position:absolute;left:0;top:50%;width:calc(var(--p) * 100%);border-top:3px solid var(--copper)}
+.tk-mid.fly svg{position:absolute;top:50%;left:calc(var(--p) * 100%);transform:translate(-50%,-50%);z-index:1}
 .sf-more{border:var(--line);border-radius:20px;margin-bottom:18px;background:var(--paper);overflow:hidden}
 .sf-more>summary{list-style:none;cursor:pointer;padding:11px 40px 11px 16px;font-size:14px;position:relative}
 .sf-more>summary::-webkit-details-marker{display:none}
@@ -405,16 +428,18 @@ const store = {
   del(k){ try{ localStorage.removeItem('jx.'+k); }catch(e){} },
 };
 const settings = Object.assign({
-  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[], her:{}, remindMin:90
+  apiKey:'', overrides:{}, layoverH:10, turnMin:40, turnMaxH:3, dutySureH:11, dutyMaxH:13, autoRefresh:false, pinned:[], her:{}, off:{}, remindMin:90
 }, store.get('settings', {}));
 delete settings.longHaul; // 舊版固定清單已改為自動判斷
 // 落地提醒預設由 60 分鐘改為 90 分鐘：沿用舊預設 60 的人一併改成 90（自己改過的數字不動）
 if (!settings.remindV){ if (settings.remindMin === 60) settings.remindMin = 90; settings.remindV = 2; store.set('settings', settings); }
 if (!settings.overrides || typeof settings.overrides !== 'object') settings.overrides = {};
 if (!settings.her || typeof settings.her !== 'object') settings.her = {};
+if (!settings.off || typeof settings.off !== 'object') settings.off = {};
 // 清掉 10 天前的「她的航班」標記
 { const tp0 = partsIn('Asia/Taipei', Date.now()), today0 = Date.UTC(tp0.y, tp0.m-1, tp0.d);
-  for (const k of Object.keys(settings.her)){ const [y,m,d] = k.split('-').map(Number); if (Date.UTC(y,m-1,d) < today0 - 10*86400e3) delete settings.her[k]; } }
+  for (const k of Object.keys(settings.her)){ const [y,m,d] = k.split('-').map(Number); if (Date.UTC(y,m-1,d) < today0 - 10*86400e3) delete settings.her[k]; }
+  for (const k of Object.keys(settings.off)){ const [y,m,d] = k.split('-').map(Number); if (Date.UTC(y,m-1,d) < today0 - 60*86400e3) delete settings.off[k]; } }
 const saveSettings = () => store.set('settings', settings);
 
 let dayOffset = 0;          // 0=今天 1=明天 ...
@@ -811,6 +836,62 @@ function bigCount(ms){
   const a = Math.max(0, ms - Date.now()), h = Math.floor(a/3600e3), m = Math.floor(a%3600e3/60e3);
   return (h ? `${h}<span> 小時 </span>` : '') + `${m}<span> 分</span>`;
 }
+// 航點座標（城市天氣用，約略位置）
+const COORD = {
+  LAX:[33.94,-118.41], SFO:[37.62,-122.38], SEA:[47.45,-122.31], ONT:[34.06,-117.60], PHX:[33.43,-112.01], GUM:[13.48,144.80],
+  PRG:[50.10,14.26], NRT:[35.77,140.39], HND:[35.55,139.78], CTS:[42.78,141.69], KIX:[34.43,135.24], UKB:[34.63,135.22],
+  NGO:[34.86,136.81], FUK:[33.59,130.45], OKA:[26.20,127.65], MMY:[24.78,125.30], SHI:[24.83,125.14], SDJ:[38.14,140.92],
+  KMJ:[32.84,130.86], HKD:[41.77,140.82], KOJ:[31.80,130.72], TAK:[34.21,134.02], TKS:[34.13,134.61], ICN:[37.46,126.44],
+  PUS:[35.18,128.94], HKG:[22.31,113.92], MFM:[22.15,113.59], SGN:[10.82,106.66], HAN:[21.22,105.81], DAD:[16.04,108.20],
+  PQC:[10.17,103.99], CXR:[12.00,109.22], MNL:[14.51,121.02], CEB:[10.31,123.98], CRK:[15.19,120.56], BKK:[13.69,100.75],
+  CNX:[18.77,98.96], HKT:[8.11,98.32], SIN:[1.36,103.99], KUL:[2.75,101.71], PEN:[5.30,100.28], CGK:[-6.13,106.66], DPS:[-8.75,115.17],
+};
+// WMO 天氣代碼 → 圖示與文字（Open-Meteo）
+function wxLabel(code, day){
+  if (code === 0) return [day ? '☀️' : '🌙', '晴'];
+  if (code === 1) return [day ? '🌤️' : '🌙', '晴時多雲'];
+  if (code === 2) return ['⛅', '多雲'];
+  if (code === 3) return ['☁️', '陰'];
+  if (code === 45 || code === 48) return ['🌫️', '霧'];
+  if (code >= 51 && code <= 57) return ['🌦️', '毛毛雨'];
+  if (code >= 61 && code <= 67) return ['🌧️', '下雨'];
+  if (code >= 71 && code <= 77) return ['❄️', '下雪'];
+  if (code >= 80 && code <= 82) return ['🌦️', '陣雨'];
+  if (code === 85 || code === 86) return ['🌨️', '陣雪'];
+  if (code >= 95) return ['⛈️', '雷雨'];
+  return ['🌡️', ''];
+}
+const WX_TTL = 30 * 60e3;
+const wxCache = store.get('wx', {}), wxBusy = new Set();
+function wxFor(code){
+  const c = COORD[code]; if (!c) return null;
+  const hit = wxCache[code];
+  if (hit && Date.now() - hit.at < WX_TTL) return hit;
+  if (!wxBusy.has(code)){
+    wxBusy.add(code);
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&current=temperature_2m,weather_code,is_day&timezone=auto`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+      .then(j => { const cu = j.current || {}; if (typeof cu.temperature_2m !== 'number') throw new Error('no data');
+        wxCache[code] = {at: Date.now(), t: cu.temperature_2m, c: cu.weather_code, day: cu.is_day !== 0}; store.set('wx', wxCache);
+        renderHerOnly(); })
+      .catch(() => { wxCache[code] = {at: Date.now() - WX_TTL + 5*60e3, fail: true}; })
+      .finally(() => wxBusy.delete(code));
+  }
+  return hit && !hit.fail ? hit : null;   // 過期資料先顯示，背景更新
+}
+function tzDiffText(tz, now){
+  const d = (offsetMin(tz, now) - offsetMin(TPE_TZ, now)) / 60;
+  if (!d) return '與台北同時間';
+  const h = Math.abs(d), hs = Number.isInteger(h) ? h : h.toFixed(1);
+  return `比台北${d < 0 ? '慢' : '快'} ${hs} 小時`;
+}
+// 外站小卡：她那邊現在幾點、天氣
+function localCard(dest, now){
+  const tz = tzOf(dest); if (!tz) return '';
+  const p = partsIn(tz, now), w = wxFor(dest);
+  const wl = w ? wxLabel(w.c, w.day) : null;
+  return `<div class="lc"><div><div class="lab muted">${esc(nameOf(dest))}現在</div><div class="lc-t">${fmt(p)}<span class="d"> ${tzDiffText(tz, now)}</span></div></div>${w ? `<div class="lc-w"><span class="ic">${wl[0]}</span><span><b>${Math.round(w.t)}°C</b><br><span class="lab muted">${wl[1]}</span></span></div>` : ''}</div>`;
+}
 const PIN_SVG = `<svg class="spin" width="96" height="34" viewBox="0 0 96 34" aria-hidden="true"><g stroke="#404B4E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M14 20 H84 a8 8 0 0 0 0 -16 H24"/><path d="M14 26 H80"/></g><rect x="4" y="14" width="16" height="16" rx="4" fill="#C3CBCD" stroke="#404B4E" stroke-width="3"/></svg>`;
 // 今天（台北）的日期 key 與日期加減
 const todayKey = () => dateKeyOf(partsIn(TPE_TZ, Date.now()));
@@ -833,7 +914,7 @@ function herCard(t){
     const depT = terminalOf(x.r, liveFor(x.r, x.depMs), 'dep');
     const arrT = r ? terminalOf(r.r, liveFor(r.r, r.depMs), 'arr') : null;
     const night = x.cls === 'long' || t.h.mode === 'night';
-    const [st, ms] = herStatus(t);
+    let [st, ms] = herStatus(t);
     const fa = f => 'https://zh-tw.flightaware.com/live/flight/' + encodeURIComponent(f.replace(/^JX/i, 'SJX'));
     // 去程落地後（她已在目的地），卡片改顯示回程的起飛與抵台時間
     const place = nameOf(x.dest);
@@ -852,13 +933,22 @@ function herCard(t){
       rows = `<div class="kv"><span class="k">去程</span><b>${esc(fno(x.r))}</b><span>${fmt(dp)} 起飛${depT ? '・'+esc(termLabel(depT.t)) : ''}</span></div>
         <div class="kv"><span class="k">回程</span>${r ? `<b>${esc(fno(r.r))}</b><span>${rp ? fmt(rp) : '--:--'} 抵台${rp && dayDiffLabel(rp, x.base) ? `<span class="d"> ${dayDiffLabel(rp, x.base)}</span>` : ''}</span><span class="tm-term">落地 ${arrT ? esc(termLabel(arrT.t)) : '未提供'}</span>` : '<span>找不到回程班機</span>'}</div>`;
     }
+    // 飛行中：登機票上的小飛機沿虛線前進（依表定時間計算）
+    const leg = onRet ? [r.depMs, r.arrMs] : [x.depMs, x.arrMs];
+    let prog = null;
+    if (leg[0] && leg[1] && now >= leg[0] && now < leg[1]){
+      prog = Math.min(1, Math.max(0, (now - leg[0]) / (leg[1] - leg[0])));
+      st = st.replace(/，(抵達|落地)$/, `・已飛 ${Math.round(prog*100)}%，$1`);
+    }
+    // 外站小卡：去程起飛後到回程起飛前（她在路上或在外站）
+    const showLc = now >= x.depMs - 6*3600e3 && (!r || now < r.depMs);
     return `<div class="sf">
       <div class="ticket">
         <span class="notch l"></span><span class="notch r"></span>
         <div class="tk-top"><span class="tk-name"><img src="starlux-mark.png" alt="">${onRet ? 'RETURN NOTE' : 'BOARDING NOTE'}</span><span>${tkDate}</span></div>
         <div class="tk-route">
           <div><div class="tk-code">${esc(tkFrom)}</div><div class="tk-city">${esc(tkFrom === HOME ? '台北桃園' : nameOf(tkFrom))}</div></div>
-          <div class="tk-mid"><svg width="34" height="22" viewBox="0 0 64 40"><use href="#plane"/></svg></div>
+          <div class="tk-mid${prog != null ? ' fly' : ''}"${prog != null ? ` style="--p:${prog.toFixed(3)}"` : ''}><svg width="34" height="22" viewBox="0 0 64 40"><use href="#plane"/></svg></div>
           <div style="text-align:right"><div class="tk-code">${esc(tkTo)}</div><div class="tk-city">${esc(tkTo === HOME ? '台北桃園' : nameOf(tkTo))}</div></div>
         </div>
       </div>
@@ -867,12 +957,14 @@ function herCard(t){
         <svg class="flap" viewBox="0 0 358 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 2 L179 54 L358 2" fill="none" stroke="#404B4E" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
         <div class="stamp">${ART.stampSvg(x.dest, country, 46)}</div>
         ${rows}
+        ${showLc ? localCard(x.dest, now) : ''}
         <div class="count"><div><div class="lab muted">${st}</div><div class="big ${ms ? '' : 'done'}">${ms ? bigCount(ms) : '♥'}</div></div><div style="text-align:right" class="lab">${night ? '過夜，隔天回來' : '當天回來'}<br>記得去接她 <span style="color:#E07F72">♥</span></div></div>
         <div class="row"><button type="button" class="pill copper" data-hcal="${k}">加入行事曆</button><a class="pill" href="${fa(fno(onRet ? r.r : x.r))}" target="_blank" rel="noopener">FlightAware</a>${off>=0&&off<=6&&off!==dayOffset ? `<button type="button" class="pill gs" data-d="${off}">看這天航班</button>` : ''}<button type="button" class="pill" data-hclear="${k}">取消標記</button></div>
       </div>
     </div>`;
 }
 let calYM = null;   // 月曆目前顯示的年月
+let offEdit = false; // 是否在「標記休假」模式
 function herCalendar(trips, tk){
   if (!calYM){ const p = partsIn(TPE_TZ, Date.now()); calYM = {y:p.y, m:p.m}; }
   const {y, m} = calYM, now = Date.now();
@@ -894,25 +986,44 @@ function herCalendar(trips, tk){
     const k = y+'-'+pad(m)+'-'+pad(d), x = info[k], isToday = k === tk;
     const cls = ['cd', isToday ? 'today' : '', k < tk ? 'past' : ''];
     let sub = '', attr = '';
-    if (x){
+    const isOff = !!settings.off[k];
+    if (offEdit){
+      cls.push(isOff ? 'off' : '', 'edit');
+      sub = isOff ? '<span class="c">休假</span>' : '';
+      attr = ` data-offday="${k}" aria-label="${esc(keyLabel(k))} ${isOff ? '取消休假' : '標記休假'}"`;
+    } else if (x){
+      if (isOff) cls.push('offdot');
       const t = x.t, night = !t.missing && (t.x.cls === 'long' || t.h.mode === 'night');
       cls.push(x.type); if (x.type === 'mark' && night) cls.push('night');
       sub = x.type === 'mark' ? `<span class="c">${esc(t.missing ? t.h.dest : t.x.dest)}</span>` : x.type === 'back' ? '<span class="c">回台</span>' : `<span class="c">${esc(t.x.dest)}</span>`;
       attr = ` data-hday="${t.k}" aria-label="${esc(keyLabel(k))} Sophie 的飛班"`;
     } else {
+      if (isOff){ cls.push('off'); sub = '<span class="c">休假</span>'; }
       const off = offsetOfKey(k);
       if (off >= 0 && off <= 6) attr = ` data-d="${off}" aria-label="看 ${esc(keyLabel(k))} 的航班"`;
     }
-    cells += attr ? `<button type="button" class="${cls.join(' ').trim()}"${attr}><span class="n">${d}</span>${sub}</button>` : `<div class="${cls.join(' ').trim()}"><span class="n">${d}</span></div>`;
+    cells += attr ? `<button type="button" class="${cls.join(' ').trim()}"${attr}><span class="n">${d}</span>${sub}</button>` : `<div class="${cls.join(' ').trim()}"><span class="n">${d}</span>${sub}</div>`;
   }
   return `<div class="calbox">
     <div class="calh"><button type="button" class="calnav" data-calnav="-1" aria-label="上個月">‹</button><div class="calt"><span class="hand">${y}</span>${m} 月</div><button type="button" class="calnav" data-calnav="1" aria-label="下個月">›</button></div>
-    <div class="calgrid">${cells}</div>
+    <div class="meet">${meetHtml(tk)}<button type="button" class="pill sm ${offEdit ? 'copper' : 'green'}" data-offedit="1">${offEdit ? '完成' : '✎ 標休假'}</button></div>
+    <div class="calgrid${offEdit ? ' editing' : ''}">${cells}</div>
     <div class="calfoot${(7 - (first + days) % 7) % 7 >= 2 ? ' lift' : ''}"><div class="calfoot-tx">
-      <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span>☾ 過夜</span></div>
-      <div class="note">點有標記的日期，<br>打開她那天的飛班 ♥</div>
+      <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span><i class="sw off"></i>休假</span><span>☾ 過夜</span></div>
+      <div class="note">${offEdit ? '點日期標記／取消她的休假，<br>好了按「完成」' : '點有標記的日期，<br>打開她那天的飛班 ♥'}</div>
     </div><img class="cal-sophie" src="sophie-chibi.png" alt="穿制服的 Sophie" width="206" height="420"></div>
   </div>`;
+}
+// 見面倒數：下一段休假（連續休假算一段）
+function meetHtml(tk){
+  const keys = Object.keys(settings.off).filter(k => settings.off[k] && k >= tk).sort();
+  if (!keys.length) return `<span class="mt-empty">標記她的休假日，這裡會出現見面倒數 ♥</span>`;
+  const start = keys[0]; let len = 1;
+  while (settings.off[keyAdd(start, len)]) len++;
+  const days = offsetOfKey(start);
+  const run = len > 1 ? `，連休 ${len} 天` : '';
+  if (start === tk) return `<span class="mt"><b>今天她休假 ♥</b><span class="mt-s">好好陪她${len > 1 ? `（連休到 ${keyLabel(keyAdd(start, len-1))}）` : ''}</span></span>`;
+  return `<span class="mt"><span class="mt-s">見面倒數</span><b>${days}</b><span class="mt-s">天</span><span class="mt-d">${keyLabel(start)} 休假${run}</span></span>`;
 }
 function herNotice(){
   const now = Date.now(), tk = todayKey();
@@ -931,9 +1042,16 @@ function herNotice(){
     }).join('')}</details>` : '';
   return head + out + herCalendar(trips, tk) + more;
 }
+// 只重畫 Sophie 區塊（天氣回來時用，不動下方航班列表）
+function renderHerOnly(){
+  if (!routes && !aero) return;
+  if ($('herBox').innerHTML) $('herBox').innerHTML = herNotice();
+  if ($('herDlg').open && $('herDlg').dataset.k){ const t = herTrip($('herDlg').dataset.k); if (t) $('herDlgBody').innerHTML = herCard(t); }
+}
 function openHerDay(k){
   const t = herTrip(k);
   if (!t) return;
+  $('herDlg').dataset.k = k;
   $('herDlgBody').innerHTML = herCard(t);
   if (!$('herDlg').open) $('herDlg').showModal();
 }
@@ -1165,6 +1283,10 @@ document.addEventListener('click', e => {
     else if (hb.dataset.hcal){ openCalDialog(hb.dataset.hcal); }
     return;
   }
+  const oe = e.target.closest('[data-offedit]');
+  if (oe){ offEdit = !offEdit; renderHerOnly(); return; }
+  const od = e.target.closest('[data-offday]');
+  if (od){ const k = od.dataset.offday; if (settings.off[k]) delete settings.off[k]; else settings.off[k] = true; saveSettings(); renderHerOnly(); return; }
   const hd = e.target.closest('[data-hday]');
   if (hd){ openHerDay(hd.dataset.hday); return; }
   const cn = e.target.closest('[data-calnav]');
