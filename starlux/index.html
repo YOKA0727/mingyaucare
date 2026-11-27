@@ -126,14 +126,7 @@ button.cd{cursor:pointer}
 .cal-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
 .cal-leg .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:2px solid var(--ink)}
 .cal-leg .sw.mark{background:var(--copper-s)} .cal-leg .sw.away{background:var(--mizu);border-color:transparent} .cal-leg .sw.back{background:var(--gold-s);border-style:dashed}
-.meet{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--green);border:var(--line2);border-radius:16px;padding:7px 8px 7px 12px;margin:0 0 10px}
-.meet .pill{flex:0 0 auto}
-.meet .pill.green{background:var(--paper)}
-.mt{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;min-width:0}
-.mt b{font-weight:400;font-size:24px;color:var(--copper);line-height:1}
-.mt .mt-s{font-size:13px}
-.mt .mt-d{font-size:12px;color:var(--muted);width:100%}
-.mt-empty{font-size:12px;color:var(--ink)}
+.caltools{display:flex;justify-content:flex-end;margin:-4px 0 8px}
 .cd.off{background:var(--green)}
 .cd.off .c{font-family:"Huninn",sans-serif;font-weight:400;font-size:10px;color:#5d6b3a}
 .cd.offdot::before{content:'';position:absolute;left:4px;top:4px;width:7px;height:7px;border-radius:50%;background:#8FA463}
@@ -936,24 +929,13 @@ function herCalendar(trips, tk){
   }
   return `<div class="calbox">
     <div class="calh"><button type="button" class="calnav" data-calnav="-1" aria-label="上個月">‹</button><div class="calt"><span class="hand">${y}</span>${m} 月</div><button type="button" class="calnav" data-calnav="1" aria-label="下個月">›</button></div>
-    <div class="meet">${meetHtml(tk)}<button type="button" class="pill sm ${offEdit ? 'copper' : 'green'}" data-offedit="1">${offEdit ? '完成' : '✎ 標休假'}</button></div>
+    <div class="caltools"><button type="button" class="pill sm ${offEdit ? 'copper' : 'green'}" data-offedit="1">${offEdit ? '完成' : '✎ 標休假'}</button></div>
     <div class="calgrid${offEdit ? ' editing' : ''}">${cells}</div>
     <div class="calfoot${(7 - (first + days) % 7) % 7 >= 2 ? ' lift' : ''}"><div class="calfoot-tx">
       <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span><i class="sw off"></i>休假</span><span>☾ 過夜</span></div>
       <div class="note">${offEdit ? '點日期標記／取消她的休假，<br>好了按「完成」' : '點有標記的日期，<br>打開她那天的飛班 ♥'}</div>
     </div><img class="cal-sophie" src="sophie-chibi.png" alt="穿制服的 Sophie" width="206" height="420"></div>
   </div>`;
-}
-// 見面倒數：下一段休假（連續休假算一段）
-function meetHtml(tk){
-  const keys = Object.keys(settings.off).filter(k => settings.off[k] && k >= tk).sort();
-  if (!keys.length) return `<span class="mt-empty">標記她的休假日，這裡會出現見面倒數 ♥</span>`;
-  const start = keys[0]; let len = 1;
-  while (settings.off[keyAdd(start, len)]) len++;
-  const days = offsetOfKey(start);
-  const run = len > 1 ? `，連休 ${len} 天` : '';
-  if (start === tk) return `<span class="mt"><b>今天她休假 ♥</b><span class="mt-s">好好陪她${len > 1 ? `（連休到 ${keyLabel(keyAdd(start, len-1))}）` : ''}</span></span>`;
-  return `<span class="mt"><span class="mt-s">見面倒數</span><b>${days}</b><span class="mt-s">天</span><span class="mt-d">${keyLabel(start)} 休假${run}</span></span>`;
 }
 function herNotice(){
   const now = Date.now(), tk = todayKey();
