@@ -121,7 +121,14 @@ button.cd{cursor:pointer}
 .calfoot{display:flex;align-items:flex-end;gap:6px;margin-top:6px}
 .calfoot-tx{flex:1;min-width:0;padding-bottom:6px}
 .calfoot .note{margin-top:6px;line-height:1.5}
-.cal-sophie{height:118px;width:auto;flex:0 0 auto;margin:0 6px 0 0;display:block;position:relative}
+.cal-sophie{position:relative;display:block;height:118px;aspect-ratio:206/420;flex:0 0 auto;margin:0 6px 0 0;transform-origin:50% 100%;animation:csBob 3.2s ease-in-out infinite}
+.cal-sophie img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cs-hand{transform-origin:28.4% 45.7%;animation:csWave 2.6s ease-in-out infinite}
+.cs-spark{transform-origin:12% 33%;animation:csSpark 2.6s ease-in-out infinite}
+@keyframes csWave{0%,60%,100%{transform:rotate(0)} 10%{transform:rotate(14deg)} 20%{transform:rotate(-5deg)} 30%{transform:rotate(14deg)} 40%{transform:rotate(-4deg)} 50%{transform:rotate(6deg)}}
+@keyframes csSpark{0%,60%,100%{opacity:.45;transform:scale(.92)} 12%,32%{opacity:1;transform:scale(1.08)} 22%,42%{opacity:.7;transform:scale(1)}}
+@keyframes csBob{0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-2px) rotate(-1.2deg)}}
+@media (prefers-reduced-motion:reduce){.cal-sophie,.cal-sophie img{animation:none}}
 .calfoot.lift .cal-sophie{margin-top:-52px}
 .cal-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
 .cal-leg .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:2px solid var(--ink)}
@@ -934,7 +941,7 @@ function herCalendar(trips, tk){
     <div class="calfoot${(7 - (first + days) % 7) % 7 >= 2 ? ' lift' : ''}"><div class="calfoot-tx">
       <div class="cal-leg"><span><i class="sw mark"></i>出發</span><span><i class="sw away"></i>在外站</span><span><i class="sw back"></i>回台</span><span><i class="sw off"></i>休假</span><span>☾ 過夜</span></div>
       <div class="note">${offEdit ? '點日期標記／取消她的休假，<br>好了按「完成」' : '點有標記的日期，<br>打開她那天的飛班 ♥'}</div>
-    </div><img class="cal-sophie" src="sophie-chibi.png" alt="穿制服的 Sophie" width="206" height="420"></div>
+    </div><span class="cal-sophie" role="img" aria-label="揮手的 Sophie"><img class="cs-body" src="sophie-chibi-body.png" alt=""><img class="cs-hand" src="sophie-chibi-hand.png" alt=""><img class="cs-spark" src="sophie-chibi-spark.png" alt=""></span></div>
   </div>`;
 }
 function herNotice(){
